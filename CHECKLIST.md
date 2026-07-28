@@ -81,16 +81,16 @@
 
 **Criterio de aceptación:** tests cubren el camino feliz, el rechazo por idempotencia repetida, y la compensación ante fallo del banco destino (circuito abierto o error).
 
-- [ ] 4.1 Scaffold Laravel + Octane + Dockerfile
-- [ ] 4.2 Modelo/migraciones MySQL: cuentas, saldos, transferencias, idempotency_keys
-- [ ] 4.3 Middleware de Idempotency-Key (Redis) — exige el header `Idempotency-Key` en el request
-- [ ] 4.4 Verificación de autenticación reforzada (step-up) para transferencias sobre un umbral configurable (`.env`): valida `acr_values`/`amr` del JWT y rechaza con un código que le indique al cliente que debe reautenticar (decisión 3.6)
-- [ ] 4.5 Orquestador Saga (débito → llamada externa → commit/compensación)
-- [ ] 4.6 Cliente interbancario fake tras interfaz `InterbankClient`, envuelto en Circuit Breaker (retry + backoff + apertura de circuito)
-- [ ] 4.7 Publicación de `TransferCompleted` / `TransferFailed` al bus
-- [ ] 4.8 Endpoint `POST /transfers`
-- [ ] 4.9 Tests (camino feliz, idempotencia, compensación, circuito abierto, rechazo por falta de step-up)
-- [ ] 4.10 `.env.example`
+- [x] 4.1 Scaffold Laravel + Octane + Dockerfile
+- [x] 4.2 Modelo/migraciones MySQL: `cuentas` (saldo) y `transferencias`. *Simplificación respecto al plan original:* no se creó una tabla `idempotency_keys` separada — la idempotencia la resuelve Redis (ítem 4.3, igual que documenta el diagrama de componentes 3b) y, como red de seguridad a nivel de base de datos, `transferencias.idempotency_key` es `unique`, así que un duplicado que por algún motivo saltara la capa de Redis igual rebotaría en la base de datos en vez de crear un registro duplicado
+- [x] 4.3 Middleware de Idempotency-Key (Redis) — exige el header `Idempotency-Key` en el request
+- [x] 4.4 Verificación de autenticación reforzada (step-up) para transferencias sobre un umbral configurable (`.env`): valida `acr`/`amr` del JWT y rechaza con un código (`step_up_required`) que le indique al cliente que debe reautenticar (decisión 3.6). Corre *antes* del middleware de idempotencia a propósito, para que un rechazo por falta de step-up nunca quede cacheado bajo la misma Idempotency-Key
+- [x] 4.5 Orquestador Saga (débito → llamada externa → commit/compensación)
+- [x] 4.6 Cliente interbancario fake tras interfaz `InterbankClient`, envuelto en Circuit Breaker (retry con backoff exponencial + jitter, apertura de circuito tras un umbral de fallas, estado en Redis para ser consistente entre workers/instancias)
+- [x] 4.7 Publicación de `TransferCompleted` / `TransferFailed` al bus (vía `EventPublisherInterface` de `bp-common`)
+- [x] 4.8 Endpoint `POST /transfers`
+- [x] 4.9 Tests (camino feliz, idempotencia, compensación, circuito abierto, rechazo y aceptación por step-up, saldo insuficiente)
+- [x] 4.10 `.env.example`
 
 ---
 

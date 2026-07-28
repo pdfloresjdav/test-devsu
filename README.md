@@ -140,7 +140,30 @@ Correr sus tests: `php artisan test` (9 tests, corren contra el Redis y el Local
 
 Construir su imagen: `docker build -f services/svc-movimientos/Dockerfile -t bp/svc-movimientos .` desde la raíz del repo.
 
-*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 4 en adelante.)*
+#### `services/svc-transferencias` (Fase 4)
+
+Orquesta transferencias propias e interbancarias con patrón **Saga** (débito → llamada externa → confirmación o compensación), **Idempotency-Key** (Redis), **Circuit Breaker** con retry/backoff sobre el cliente interbancario, y **autenticación reforzada (step-up)** obligatoria para montos grandes.
+
+```bash
+cd services/svc-transferencias
+cp .env.example .env
+composer install
+php artisan migrate   # crea las tablas en la base MySQL dedicada "svc_transferencias"
+php artisan serve --port=8003
+```
+
+> La base `svc_transferencias` se crea sola la primera vez que se levanta el contenedor de MySQL (`infra/mysql-init/01-databases.sql`). Si tu MySQL local ya existía antes de este script, créala a mano una vez: `docker exec bp-mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS svc_transferencias;"`.
+
+Endpoint: `POST /transfers` (requiere `Authorization: Bearer <JWT>` **e** `Idempotency-Key`), body `{cuenta_origen, cuenta_destino, monto, descripcion}`.
+- Reintentar con la misma `Idempotency-Key` devuelve la misma respuesta sin volver a debitar.
+- Si `cuenta_destino` empieza con `FALLA-`, el cliente interbancario fake simula un rechazo del banco destino → la transferencia queda `fallida` y el saldo se compensa (se revierte el débito).
+- Si `monto` supera `STEP_UP_THRESHOLD` (1000 por defecto) y el JWT no trae `acr=step-up` (ni `amr` con `mfa`), responde `403 step_up_required`.
+
+Correr sus tests: `php artisan test` (11 tests, contra el MySQL/Redis/LocalStack reales de `docker-compose`, con cada test envuelto en una transacción que se revierte al final).
+
+Construir su imagen: `docker build -f services/svc-transferencias/Dockerfile -t bp/svc-transferencias .` desde la raíz del repo.
+
+*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 5 en adelante.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
@@ -165,4 +188,4 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`) y Fase 3 (`services/svc-movimientos`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.
+- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`) y Fase 4 (`services/svc-transferencias`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.

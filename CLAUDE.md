@@ -50,6 +50,7 @@ Antes de tocar código en una sesión nueva: leer `CHECKLIST.md` (qué sigue) y 
 **Pruebas:**
 - Ningún ítem de checklist que agregue una regla de negocio (idempotencia, compensación de Saga, invalidación de caché, apertura de Circuit Breaker, etc.) se marca `[x]` sin al menos un test automatizado que la ejerza.
 - Los tests corren contra la infraestructura local (`docker compose`), nunca contra servicios reales de AWS o proveedores externos.
+- MySQL se limpia solo entre tests con `Illuminate\Foundation\Testing\DatabaseTransactions` (cada test corre en una transacción que se revierte al final). **Redis no se revierte solo** — cualquier test que escriba estado compartido en Redis con una clave fija (locks, contadores de Circuit Breaker, etc., no claves con un id único por test) tiene que limpiarlo explícitamente en `tearDown()`, o contamina al siguiente test que use la misma clave (pasó en `svc-transferencias` con el estado del Circuit Breaker). Cuando la clave sí incluye un identificador único por test (un `cuentaId` con UUID, por ejemplo), no hace falta limpieza porque no hay colisión posible.
 
 **Seguridad:**
 - Nunca commitear secretos, tokens o credenciales reales — solo valores de ejemplo en `.env.example`.
