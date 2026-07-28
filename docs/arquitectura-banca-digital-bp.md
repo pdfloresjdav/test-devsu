@@ -2,9 +2,10 @@
 
 **Entidad:** BP
 **Tipo de documento:** Diseño de arquitectura de solución (modelo C4)
-**Versión:** 1.0
+**Versión:** 1.1
 **Fecha:** 2026-07-28
 **Clasificación:** Uso interno / confidencial
+**Repositorio:** https://github.com/pdfloresjdav/test-devsu
 
 ---
 
@@ -326,6 +327,7 @@ Los diagramas dinámicos del modelo C4 muestran, para un escenario de ejecución
 
 ## 12. Referencias
 
+- Repositorio del proyecto (código fuente de los diagramas, documento y PDF): https://github.com/pdfloresjdav/test-devsu
 - OAuth 2.0 Security Best Current Practice (RFC 9700 / borrador de OAuth 2.1).
 - RFC 7636 — Proof Key for Code Exchange (PKCE).
 - RFC 8252 — OAuth 2.0 for Native Apps.
