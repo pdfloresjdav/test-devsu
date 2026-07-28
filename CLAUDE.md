@@ -31,6 +31,10 @@ Antes de tocar código en una sesión nueva: leer `CHECKLIST.md` (qué sigue) y 
 - Todo servicio expone `GET /health` (del paquete `bp-common`) y valida JWT con el middleware compartido.
 - Cada servicio commitea su `.env.example`; el `.env` real siempre va en `.gitignore`.
 
+**Entorno local (Docker):**
+- El entorno de infraestructura se maneja con `make up` / `make down` / `make logs` / `make ps` (nunca `docker compose` directo salvo para depurar), para que el flujo sea el mismo sin importar cuántos servicios se agreguen.
+- Si una imagen Docker de terceros crashea en bucle en esta máquina (Apple Silicon) con errores que huelen a incompatibilidad nativa (p. ej. `FileLoadException` de .NET, "exec format error"), probar primero fijando `platform: linux/amd64` en el servicio antes de buscar otra imagen — resolvió el caso de `oidc-server-mock`.
+
 **Frontend (React + TypeScript / React Native + TypeScript):**
 - ESLint + Prettier obligatorios, sin warnings al cerrar un ítem.
 - Lógica de negocio compartible entre SPA y móvil (validaciones, formateo, llamadas a API) se aísla en módulos reutilizables, no se duplica entre ambos proyectos.

@@ -17,6 +17,7 @@
 - Persistencia relacional: **MySQL real local** (Docker) desde ya — es el mismo protocolo que Aurora MySQL, así que pasar a producción es solo cambiar host/credenciales en `.env`.
 - Todo lo demás (DynamoDB, EventBridge/SQS, S3, Auth0/OIDC, KYC, Rekognition, red interbancaria, Pinpoint/SES) se implementa **contra una interfaz (Repository/Adapter)** con un driver **local** (LocalStack, mocks, fakes) y un driver **real** (AWS SDK / proveedor real), seleccionable por variables en `.env`. Nunca se hardcodea el proveedor dentro de la lógica de negocio.
 - Cada servicio trae su propio `.env.example` versionado; el `.env` real siempre va en `.gitignore`.
+- **Amazon API Gateway** (borde de la arquitectura en AWS) no se emula en local con una herramienta aparte: su función de autorización JWT la cubre el middleware compartido de `bp-common` (Fase 1) en cada servicio, y su función de enrutamiento/throttling se resuelve llamando directo al puerto de cada servicio en `docker-compose.yml`. El API Gateway real como recurso de AWS se modela en la Fase 13 (IaC).
 
 ---
 
@@ -24,11 +25,11 @@
 
 **Criterio de aceptación de la fase:** `docker compose up` levanta todos los contenedores de infraestructura sin error y cada uno responde a un chequeo básico (ping/health).
 
-- [ ] 0.1 Crear estructura de carpetas: `services/`, `packages/`, `frontend-web/`, `frontend-mobile/`, `infra/`
-- [ ] 0.2 `docker-compose.yml` raíz con: MySQL 8, Redis, LocalStack (DynamoDB, SQS, EventBridge, S3), servicio mock-oidc (emisor JWT local)
-- [ ] 0.3 `.env.example` raíz documentando variables compartidas (puertos, credenciales de desarrollo, endpoints de LocalStack)
-- [ ] 0.4 `Makefile` (o script equivalente) con `make up`, `make down`, `make logs`
-- [ ] 0.5 Verificación manual: todos los contenedores arriba y responden
+- [x] 0.1 Crear estructura de carpetas: `services/`, `packages/`, `frontend-web/`, `frontend-mobile/`, `infra/`
+- [x] 0.2 `docker-compose.yml` raíz con: MySQL 8, Redis, LocalStack (DynamoDB, SQS, EventBridge, S3), servicio mock-oidc (emisor JWT local)
+- [x] 0.3 `.env.example` raíz documentando variables compartidas (puertos, credenciales de desarrollo, endpoints de LocalStack)
+- [x] 0.4 `Makefile` (o script equivalente) con `make up`, `make down`, `make logs`
+- [x] 0.5 Verificación manual: todos los contenedores arriba y responden
 
 ---
 
@@ -38,11 +39,12 @@
 
 - [ ] 1.1 Scaffold del paquete Composer (`packages/bp-common`)
 - [ ] 1.2 Middleware de validación JWT con dos modos por `.env` (`OAUTH_MODE=local` con clave RSA propia / `OAUTH_MODE=auth0` con JWKS remoto)
-- [ ] 1.3 Middleware de Correlation-Id para trazabilidad entre servicios
-- [ ] 1.4 Formato estándar de respuesta y de error de la API (envelope común)
-- [ ] 1.5 Trait/endpoint de healthcheck reutilizable (`GET /health`)
-- [ ] 1.6 Tests unitarios del paquete
-- [ ] 1.7 Confirmar que un servicio puede requerirlo vía path-repository en `composer.json`
+- [ ] 1.3 Soporte de verificación DPoP (Proof-of-Possession) en el middleware de auth, activable por `.env` (`DPOP_ENFORCED=true|false`) — decisión 3.6 del documento de arquitectura; puede quedar deshabilitado por defecto en local si el mock-oidc no emite DPoP, pero la validación debe existir y tener test
+- [ ] 1.4 Middleware de Correlation-Id para trazabilidad entre servicios
+- [ ] 1.5 Formato estándar de respuesta y de error de la API (envelope común)
+- [ ] 1.6 Trait/endpoint de healthcheck reutilizable (`GET /health`)
+- [ ] 1.7 Tests unitarios del paquete
+- [ ] 1.8 Confirmar que un servicio puede requerirlo vía path-repository en `composer.json`
 
 ---
 
@@ -66,7 +68,7 @@
 
 - [ ] 3.1 Scaffold Laravel + Octane + Dockerfile
 - [ ] 3.2 Repository de movimientos: driver `dynamodb-local` (vía LocalStack/DynamoDB Local) y driver `dynamodb` real, tras interfaz `MovimientosRepository`
-- [ ] 3.3 Cache-Aside con Redis (ElastiCache-compatible) para últimos movimientos
+- [ ] 3.3 Cache-Aside con Redis (ElastiCache-compatible) para últimos movimientos, con invalidación activa de la clave al registrarse un nuevo movimiento (decisión 3.8, no solo TTL)
 - [ ] 3.4 Endpoint `GET /cuentas/{id}/movimientos`
 - [ ] 3.5 Publicación del evento `MovementRegistered` al bus (interfaz `EventPublisher`, driver local EventBridge/SQS vía LocalStack)
 - [ ] 3.6 Tests (incluye test explícito del comportamiento Cache-Aside)
@@ -80,13 +82,14 @@
 
 - [ ] 4.1 Scaffold Laravel + Octane + Dockerfile
 - [ ] 4.2 Modelo/migraciones MySQL: cuentas, saldos, transferencias, idempotency_keys
-- [ ] 4.3 Middleware de Idempotency-Key (Redis)
-- [ ] 4.4 Orquestador Saga (débito → llamada externa → commit/compensación)
-- [ ] 4.5 Cliente interbancario fake tras interfaz `InterbankClient`, envuelto en Circuit Breaker (retry + backoff + apertura de circuito)
-- [ ] 4.6 Publicación de `TransferCompleted` / `TransferFailed` al bus
-- [ ] 4.7 Endpoint `POST /transfers`
-- [ ] 4.8 Tests (camino feliz, idempotencia, compensación, circuito abierto)
-- [ ] 4.9 `.env.example`
+- [ ] 4.3 Middleware de Idempotency-Key (Redis) — exige el header `Idempotency-Key` en el request
+- [ ] 4.4 Verificación de autenticación reforzada (step-up) para transferencias sobre un umbral configurable (`.env`): valida `acr_values`/`amr` del JWT y rechaza con un código que le indique al cliente que debe reautenticar (decisión 3.6)
+- [ ] 4.5 Orquestador Saga (débito → llamada externa → commit/compensación)
+- [ ] 4.6 Cliente interbancario fake tras interfaz `InterbankClient`, envuelto en Circuit Breaker (retry + backoff + apertura de circuito)
+- [ ] 4.7 Publicación de `TransferCompleted` / `TransferFailed` al bus
+- [ ] 4.8 Endpoint `POST /transfers`
+- [ ] 4.9 Tests (camino feliz, idempotencia, compensación, circuito abierto, rechazo por falta de step-up)
+- [ ] 4.10 `.env.example`
 
 ---
 
@@ -96,10 +99,11 @@
 
 - [ ] 5.1 Scaffold Laravel + Horizon + Dockerfile
 - [ ] 5.2 Consumidor de cola (SQS local vía LocalStack) para eventos de dominio
-- [ ] 5.3 Repository de auditoría: driver local (DynamoDB Local) y driver real (DynamoDB + Streams a S3 Object Lock), tras interfaz `AuditRepository`
+- [ ] 5.3 Repository de auditoría: driver local (DynamoDB vía LocalStack) y driver real (DynamoDB + Streams a S3 Object Lock), tras interfaz `AuditRepository`
 - [ ] 5.4 Registro de auditoría con actor, acción, timestamp y hash del evento
-- [ ] 5.5 Tests (consumo de evento de prueba → registro persistido)
-- [ ] 5.6 `.env.example`
+- [ ] 5.5 WORM Archiver: en local, copia el registro a un bucket S3 de LocalStack como stand-in (LocalStack no soporta Object Lock real); documentar explícitamente en el código que la inmutabilidad real (`Object Lock` modo Compliance) solo aplica en AWS (Fase 13)
+- [ ] 5.6 Tests (consumo de evento de prueba → registro persistido → archivo en el bucket stand-in)
+- [ ] 5.7 `.env.example`
 
 ---
 
@@ -110,10 +114,11 @@
 - [ ] 6.1 Scaffold Laravel + Horizon + Dockerfile
 - [ ] 6.2 Consumidor de cola para eventos de dominio
 - [ ] 6.3 `ChannelRouter` que decide push/SMS/email según tipo de evento
-- [ ] 6.4 Adaptadores de canal tras interfaz `NotificationChannel`: driver `log` (dev) y driver `aws` (Pinpoint + SES)
-- [ ] 6.5 Registro de estado de entrega (`DeliveryTracker`)
-- [ ] 6.6 Tests
-- [ ] 6.7 `.env.example`
+- [ ] 6.4 `TemplateEngine` que genera el contenido de la notificación según el tipo de evento y el idioma del cliente (Blade / Markdown Mail)
+- [ ] 6.5 Adaptadores de canal tras interfaz `NotificationChannel`: driver `log` (dev) y driver `aws` (Pinpoint + SES)
+- [ ] 6.6 Registro de estado de entrega (`DeliveryTracker`)
+- [ ] 6.7 Tests
+- [ ] 6.8 `.env.example`
 
 ---
 
@@ -137,9 +142,10 @@
 - [ ] 8.1 Scaffold Laravel + Octane + Dockerfile
 - [ ] 8.2 Clientes hacia los 3 servicios de negocio
 - [ ] 8.3 Cliente KYC fake tras interfaz `KycProvider` (driver fake / driver Onfido-iProov real)
-- [ ] 8.4 Endpoint de onboarding (`POST /onboarding`) que orquesta: envío a KYC → alta en Auth0/mock-oidc → respuesta al cliente
-- [ ] 8.5 Tests (aprobado, rechazado)
-- [ ] 8.6 `.env.example`
+- [ ] 8.4 Endpoint de onboarding (`POST /onboarding`) que orquesta: envío a KYC → alta en Auth0/mock-oidc → registro de credencial (WebAuthn/FIDO2 o usuario+clave) → respuesta al cliente
+- [ ] 8.5 Cliente de liveness ligero tras interfaz `LivenessProvider` (driver fake / driver AWS Rekognition real), usado en el endpoint de revalidación de riesgo para operaciones sensibles (paso "step-up" del diagrama de secuencia 8.2)
+- [ ] 8.6 Tests (onboarding aprobado, rechazado, revalidación de liveness)
+- [ ] 8.7 `.env.example`
 
 ---
 
@@ -150,7 +156,7 @@
 - [ ] 9.1 Scaffold (Vite + React + TypeScript) + ESLint/Prettier
 - [ ] 9.2 Login con Authorization Code + PKCE contra `OAUTH_MODE` configurado por `.env`
 - [ ] 9.3 Pantalla de histórico de movimientos
-- [ ] 9.4 Pantalla/formulario de transferencia (con manejo de estado de error/compensación)
+- [ ] 9.4 Pantalla/formulario de transferencia: genera un `Idempotency-Key` por intento y lo reenvía igual ante reintentos por timeout; maneja el estado de error/compensación y el rechazo por step-up (redirige a reautenticación)
 - [ ] 9.5 Manejo de sesión/refresh token
 - [ ] 9.6 Tests (al menos de los flujos críticos)
 - [ ] 9.7 `.env.example`
@@ -163,8 +169,8 @@
 
 - [ ] 10.1 Scaffold (React Native + TypeScript) + ESLint/Prettier
 - [ ] 10.2 Pantalla de onboarding (captura de documento/selfie simulada) → llamada a `bff-mobile`
-- [ ] 10.3 Registro de credencial (usuario/clave) y stub de biometría nativa
-- [ ] 10.4 Login recurrente (PKCE + biometría simulada)
+- [ ] 10.3 Registro de credencial: usuario/clave y/o WebAuthn/FIDO2 (passkey) atado a biometría nativa del dispositivo (Face ID / BiometricPrompt, vía stub en el emulador)
+- [ ] 10.4 Login recurrente (Authorization Code + PKCE + biometría nativa simulada, sin volver a pasar por el proveedor KYC)
 - [ ] 10.5 Pantallas de movimientos y transferencia (reutilizando contratos del BFF Móvil)
 - [ ] 10.6 Tests
 - [ ] 10.7 `.env.example`
@@ -191,6 +197,14 @@
 
 ## Fase 13 — Infraestructura como código (futuro / al conectar AWS real)
 
+**Criterio de aceptación:** cada módulo de IaC mapea 1:1 a una decisión de la sección 3 o a una consideración transversal de la sección 9 del documento de arquitectura — no se agrega infraestructura que no esté documentada, ni queda documentado algo sin su módulo.
+
 - [ ] 13.1 Definir herramienta de IaC (Terraform o AWS CDK)
-- [ ] 13.2 Módulos para VPC, ECS Fargate, Aurora, ElastiCache, DynamoDB, EventBridge/SQS, S3, API Gateway
-- [ ] 13.3 Pipeline de despliegue
+- [ ] 13.2 Red y cómputo: VPC Multi-AZ, subredes públicas/privadas, ECS Fargate (cluster + task definitions + Auto Scaling por CPU/latencia/profundidad de cola), API Gateway (JWT Authorizer + throttling)
+- [ ] 13.3 Datos: Aurora MySQL (Multi-AZ + Global Database para DR), DynamoDB (Streams habilitado + Global Tables), ElastiCache Redis (Multi-AZ), S3 con Object Lock (modo Compliance) + Cross-Region Replication
+- [ ] 13.4 Mensajería y notificaciones: EventBridge, SQS (con DLQ por consumidor), Pinpoint, SES
+- [ ] 13.5 Seguridad: WAF + Shield Advanced en el borde, KMS (llaves separadas por dominio de dato), Secrets Manager con rotación automática, mTLS entre servicios (App Mesh o equivalente), IAM Task Roles de mínimo privilegio por servicio (uno por cada `services/*`)
+- [ ] 13.6 Alta disponibilidad y DR: Route 53 con failover routing + health checks hacia la región secundaria pasiva, validación de RTO/RPO objetivo (sección 9.3)
+- [ ] 13.7 Monitoreo y excelencia operativa: CloudWatch (métricas/logs/alarmas), X-Ray (tracing distribuido), CloudWatch Synthetics (canarios de login/movimientos/transferencia), GuardDuty + Security Hub
+- [ ] 13.8 Identidad: Auth0/Okta CIC como Authorization Server real (reemplaza al mock-oidc), configuración de MFA adaptativo y WebAuthn/passkeys
+- [ ] 13.9 Pipeline de despliegue (build de imágenes, push a ECR, deploy a ECS Fargate por ambiente)

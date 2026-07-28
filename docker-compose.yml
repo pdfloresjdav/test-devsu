@@ -1,0 +1,104 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bp}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - bp_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: bp-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  localstack:
+    image: localstack/localstack:3
+    container_name: bp-localstack
+    restart: unless-stopped
+    environment:
+      SERVICES: dynamodb,sqs,events,s3
+      DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+      PERSISTENCE: 1
+    ports:
+      - "${LOCALSTACK_PORT:-4566}:4566"
+    volumes:
+      - bp_localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mock-oidc:
+    image: ghcr.io/soluto/oidc-server-mock:latest
+    platform: linux/amd64
+    container_name: bp-mock-oidc
+    restart: unless-stopped
+    ports:
+      - "${MOCK_OIDC_PORT:-4011}:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:80
+      SERVER_OPTIONS_INLINE: |
+        {
+          "AccessTokenJwtType": "JWT",
+          "Discovery": { "ShowKeySet": true },
+          "Authentication": { "CookieSameSiteMode": "Lax", "CheckSessionCookieSameSiteMode": "Lax" }
+        }
+      LOGIN_OPTIONS_INLINE: |
+        {
+          "AllowRememberLogin": false
+        }
+      CLIENTS_CONFIGURATION_INLINE: |
+        [
+          {
+            "ClientId": "bp-web",
+            "ClientSecrets": [],
+            "Description": "Cliente publico SPA/App movil de BP (Authorization Code + PKCE)",
+            "AllowedGrantTypes": ["authorization_code"],
+            "RequireClientSecret": false,
+            "RequirePkce": true,
+            "AllowedScopes": ["openid", "profile", "email", "offline_access"],
+            "RedirectUris": ["http://localhost:5173/callback", "http://localhost:19006/callback"],
+            "PostLogoutRedirectUris": ["http://localhost:5173", "http://localhost:19006"],
+            "AllowOfflineAccess": true
+          }
+        ]
+      USERS_CONFIGURATION_INLINE: |
+        [
+          {
+            "SubjectId": "1",
+            "Username": "cliente.demo",
+            "Password": "Demo1234!",
+            "Claims": [
+              { "Type": "name", "Value": "Cliente Demo BP" },
+              { "Type": "email", "Value": "cliente.demo@bp.test" }
+            ]
+          }
+        ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/.well-known/openid-configuration"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  bp_mysql_data:
+  bp_localstack_data:

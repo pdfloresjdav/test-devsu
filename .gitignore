@@ -19,6 +19,13 @@ npm-debug.log*
 !diagrams/**/*.png
 !diagrams/**/*.svg
 
+# Variables de entorno reales (nunca commitear, solo .env.example)
+.env
+.env.local
+services/*/.env
+frontend-web/.env
+frontend-mobile/.env
+
 # Archivos temporales
 *.tmp
 *.log
