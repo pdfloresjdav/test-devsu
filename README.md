@@ -189,7 +189,30 @@ Correr sus tests: `php artisan test` (9 tests contra el DynamoDB/S3/SQS/EventBri
 
 Construir su imagen: `docker build -f services/svc-auditoria/Dockerfile -t bp/svc-auditoria .` desde la raíz del repo (no lleva Swoole: es un worker, no sirve HTTP).
 
-*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 6 en adelante.)*
+#### `services/svc-notificaciones` (Fase 6)
+
+Consumidor de eventos de dominio (mismo patrón que Auditoría, con su propia cola SQS): decide el canal según el tipo de evento (`ChannelRouter`), genera el contenido (`TemplateEngine`), lo "envía" y registra el resultado de entrega (`DeliveryTracker` en DynamoDB). No expone HTTP.
+
+```bash
+cd services/svc-notificaciones
+cp .env.example .env
+composer install
+
+# Provisionar la infraestructura local (una sola vez; make up ya debe estar corriendo):
+php artisan notifications:setup-infrastructure   # crea la cola SQS + su DLQ, la regla de EventBridge y la tabla DynamoDB
+```
+
+> Mismo recordatorio que en Auditoría: el bus/regla de EventBridge no sobrevive un reinicio de `docker-compose`; si se reinició, hay que volver a correr este comando de provisión.
+
+Correr el consumidor: `php artisan notifications:consume` (continuo) o `php artisan notifications:consume --once` (un ciclo, para probar a mano).
+
+Con `NOTIFICATION_DRIVER=log` (el default en `.env.example`), cada notificación queda en `storage/logs/laravel.log` con el canal, destinatario y contenido — no requiere credenciales de Pinpoint/SES. Cambiar a `NOTIFICATION_DRIVER=aws` activa Pinpoint (push/sms) y SES (email) reales sin tocar código. *Nota: Pinpoint no tiene soporte gratuito en LocalStack, así que el driver `aws` no se prueba en local, solo el `log`.*
+
+Correr sus tests: `php artisan test` (13 tests, incluyendo un end-to-end real contra el SQS/EventBridge/DynamoDB de `docker-compose`).
+
+Construir su imagen: `docker build -f services/svc-notificaciones/Dockerfile -t bp/svc-notificaciones .` desde la raíz del repo (worker puro, sin Swoole).
+
+*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 7 en adelante.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
@@ -214,4 +237,4 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`), Fase 4 (`services/svc-transferencias`) y Fase 5 (`services/svc-auditoria`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.
+- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`), Fase 4 (`services/svc-transferencias`), Fase 5 (`services/svc-auditoria`) y Fase 6 (`services/svc-notificaciones`) completas. Con esto, las 5 fases previstas de microservicios de negocio + workers están cerradas — quedan las Fases 7-8 (BFFs), 9-10 (frontends), 11-12 (orquestación/CI) y 13 (IaC). Ver `CHECKLIST.md`.

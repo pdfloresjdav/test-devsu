@@ -193,3 +193,23 @@ Bitácora cronológica del desarrollo. Cada entrada corresponde a uno o más ít
   3. **Falsa alarma durante el desarrollo, documentada para no repetirla:** el primer intento de `audit:consume --once` no imprimió nada, lo que se interpretó erróneamente como "no llegó ningún mensaje". En realidad el comando solo logueaba en caso de *error*, no de éxito — sí había procesado el mensaje correctamente (confirmado revisando DynamoDB/S3 directamente). Se corrigió agregando un log de éxito (`$this->info(...)`) para que el comando nunca quede en silencio ambiguo.
 - **Nota operativa (ya adelantada en la entrada anterior, confirmada aquí):** el bus/regla de EventBridge no sobrevive un reinicio de LocalStack; queda documentado en el README de este servicio.
 - **Bloqueos / pendientes para retomar:** Fase 5 completa. Siguiente paso: Fase 6 (`services/svc-notificaciones`, consumidor de SQS igual que Auditoría, con `ChannelRouter` + `TemplateEngine` + adaptadores Pinpoint/SES).
+
+## 2026-07-28 (continuación — Fase 6: `services/svc-notificaciones`)
+
+- **Ítem(s) del checklist:** 6.1 a 6.9 (6.9 agregado durante la fase)
+- **Qué se hizo:**
+  - Scaffold de `services/svc-notificaciones`, mismo patrón "worker puro" que Auditoría (sin Octane/Horizon, ver nota ya establecida en `CHECKLIST.md`/`CLAUDE.md`).
+  - `App\Services\ChannelRouter`: mapa configurable evento→canales (`config('services.notificaciones.channel_map')`) — `TransferCompleted`/`TransferFailed` van por `push`+`email` (canal inmediato + respaldo, decisión 3.12), `MovementRegistered` solo por `push`.
+  - `App\Services\TemplateEngine`: una vista Blade por tipo de evento (`resources/views/notifications/*.blade.php`) + plantilla genérica de respaldo si no existe una específica. Limitación documentada: no soporta idioma del cliente todavía (queda fijo en español) porque ninguno de los eventos publicados hoy trae ese dato.
+  - `App\Contracts\NotificationChannel` + 3 adaptadores: `LogNotificationChannel` (driver `log`, deja la notificación en el log — es el que satisface el criterio de aceptación de la fase), `PinpointNotificationChannel` (push/sms real) y `SesNotificationChannel` (email real), resueltos por `NotificationChannelFactory` según `NOTIFICATION_DRIVER`.
+  - `App\Repositories\DynamoDbDeliveryTracker`: registra cada intento de entrega (actor, canal, acción, estado, motivo de falla) en DynamoDB — evidencia de que el cliente fue notificado, exigida por la norma.
+  - `App\Console\Commands\ConsumeNotificationEvents` (`notifications:consume`) y `SetupNotificationInfrastructure` (`notifications:setup-infrastructure`, ítem 6.9): misma cola/DLQ/regla de EventBridge que Auditoría pero **propias** (`notification-events-queue` / `notify-all-domain-events`) — el patrón Pub/Sub con Competing Consumers exige que cada consumidor tenga su propia cola suscrita al mismo bus, no que compartan una.
+  - 13 tests: `ChannelRouter`, `TemplateEngine`, `LogNotificationChannel` (verifica el log real con `Log::spy()`), `NotificationEventProcessor` (con mocks, camino feliz y fallo de canal), `DynamoDbDeliveryTracker` contra LocalStack real, y un end-to-end completo (publica `TransferCompleted` → se consume → 2 logs de notificación —push y email— y 2 registros de entrega en DynamoDB).
+- **Cómo se verificó:**
+  - `php artisan test` → 13 passed, 40 assertions.
+  - Build real de la imagen Docker + `docker run` en segundo plano conectado a la red de `docker-compose`: se publicó un evento desde `svc-movimientos` y el contenedor de notificaciones lo procesó solo; se confirmó el contenido exacto del log dentro del contenedor (`docker exec ... tail storage/logs/laravel.log`), no solo el `docker logs` de stdout.
+- **Desviaciones respecto a la arquitectura o al checklist:**
+  1. Sin Octane/Horizon — mismo ajuste que Auditoría.
+  2. Se agregó el ítem 6.9 (provisión de infraestructura), no previsto en el plan original pero indispensable.
+  3. El driver `aws` (Pinpoint/SES reales) se implementó pero **no se probó** contra LocalStack — Pinpoint es una funcionalidad de pago (Pro) de LocalStack. Queda como código listo para producción pero solo verificado manualmente por lectura, no por test automatizado; algo a tener en cuenta al conectar AWS real (Fase 13).
+- **Bloqueos / pendientes para retomar:** Fase 6 completa — con esto quedan cerrados los 5 microservicios de negocio/workers previstos (Datos Básicos, Movimientos, Transferencias, Auditoría, Notificaciones). Siguiente paso: Fase 7 (`services/bff-web`).

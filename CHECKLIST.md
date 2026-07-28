@@ -114,14 +114,15 @@
 
 **Criterio de aceptación:** un evento de prueba dispara un log de notificación con el canal y contenido correctos; el cambio a AWS real es solo de configuración.
 
-- [ ] 6.1 Scaffold Laravel + Horizon + Dockerfile
-- [ ] 6.2 Consumidor de cola para eventos de dominio
-- [ ] 6.3 `ChannelRouter` que decide push/SMS/email según tipo de evento
-- [ ] 6.4 `TemplateEngine` que genera el contenido de la notificación según el tipo de evento y el idioma del cliente (Blade / Markdown Mail)
-- [ ] 6.5 Adaptadores de canal tras interfaz `NotificationChannel`: driver `log` (dev) y driver `aws` (Pinpoint + SES)
-- [ ] 6.6 Registro de estado de entrega (`DeliveryTracker`)
-- [ ] 6.7 Tests
-- [ ] 6.8 `.env.example`
+- [x] 6.1 Scaffold Laravel + Dockerfile. Mismo ajuste que Auditoría (Fase 5): sin Octane ni Horizon en sentido estricto — worker puro con `notifications:consume` (long-polling directo a SQS) como proceso principal
+- [x] 6.2 Consumidor de cola para eventos de dominio — cola y regla de EventBridge **propias** (`notification-events-queue`, distinta de la de Auditoría), patrón Pub/Sub con Competing Consumers: cada consumidor recibe su copia de cada evento del mismo bus
+- [x] 6.3 `ChannelRouter` que decide push/SMS/email según tipo de evento (mapa configurable en `.env`/`config/services.php`: eventos críticos van por push + email, informativos solo por push)
+- [x] 6.4 `TemplateEngine` que genera el contenido de la notificación según el tipo de evento (Blade), con plantilla genérica de respaldo. *Limitación conocida:* no soporta idioma del cliente todavía (fijo en español) porque los eventos de Movimientos/Transferencias no traen ese dato — se documenta en el `.env.example` como pendiente para cuando exista un perfil de cliente consultable
+- [x] 6.5 Adaptadores de canal tras interfaz `NotificationChannel`: driver `log` (dev, deja la notificación en el log — no requiere Pinpoint/SES reales) y driver `aws` (Pinpoint para push/sms, SES para email)
+- [x] 6.6 Registro de estado de entrega (`DeliveryTracker` sobre DynamoDB, mismo patrón que el resto del proyecto)
+- [x] 6.7 Tests (13, incluyendo un end-to-end real: publica un evento en EventBridge → se consume → se verifica el log Y el registro de entrega en DynamoDB)
+- [x] 6.8 `.env.example`
+- [x] 6.9 *(agregado durante esta fase)* `App\Console\Commands\SetupNotificationInfrastructure`: provisión idempotente de la cola SQS + DLQ + regla de EventBridge + tabla DynamoDB propias de este servicio
 
 ---
 
