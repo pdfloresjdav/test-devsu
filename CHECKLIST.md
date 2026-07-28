@@ -98,13 +98,15 @@
 
 **Criterio de aceptación:** un evento publicado por Transferencias o Movimientos aparece persistido en el store de auditoría local.
 
-- [ ] 5.1 Scaffold Laravel + Horizon + Dockerfile
-- [ ] 5.2 Consumidor de cola (SQS local vía LocalStack) para eventos de dominio
-- [ ] 5.3 Repository de auditoría: driver local (DynamoDB vía LocalStack) y driver real (DynamoDB + Streams a S3 Object Lock), tras interfaz `AuditRepository`
-- [ ] 5.4 Registro de auditoría con actor, acción, timestamp y hash del evento
-- [ ] 5.5 WORM Archiver: en local, copia el registro a un bucket S3 de LocalStack como stand-in (LocalStack no soporta Object Lock real); documentar explícitamente en el código que la inmutabilidad real (`Object Lock` modo Compliance) solo aplica en AWS (Fase 13)
-- [ ] 5.6 Tests (consumo de evento de prueba → registro persistido → archivo en el bucket stand-in)
-- [ ] 5.7 `.env.example`
+- [x] 5.1 Scaffold Laravel + Dockerfile. *Ajuste respecto al plan original:* no se instaló Laravel Octane ni se usa Laravel Horizon en sentido estricto — este servicio no sirve HTTP (no hay nada que Octane acelere) y su fuente de trabajo es una cola SQS con el sobre de EventBridge, no la cola interna de Laravel que Horizon supervisa. El "worker" es un comando Artisan de larga duración (`audit:consume`) que hace long-polling directo contra el SDK de AWS; es el equivalente funcional al "Laravel Horizon Worker" del diagrama de contenedores, corriendo como proceso principal del contenedor
+- [x] 5.2 Consumidor de cola (SQS local vía LocalStack) para eventos de dominio (`App\Console\Commands\ConsumeAuditEvents`, con `--once` para tests/depuración)
+- [x] 5.3 Repository de auditoría sobre DynamoDB (`DynamoDbClient` compartido de `bp-common`, mismo patrón local/AWS real que el resto del proyecto), tras interfaz `AuditRepository`
+- [x] 5.4 Registro de auditoría con actor, acción, timestamp y hash del evento (`DynamoDbAuditRepository`)
+- [x] 5.5 WORM Archiver: en local, copia el registro a un bucket S3 de LocalStack como stand-in (`App\Services\WormArchiver`); documentado explícitamente en el código que la inmutabilidad real (`Object Lock` modo Compliance) solo aplica en AWS (Fase 13)
+- [x] 5.6 Tests (consumo de evento de prueba → registro persistido → archivo en el bucket stand-in — incluye un test end-to-end real: publica en EventBridge, corre `audit:consume --once`, verifica el registro en DynamoDB)
+- [x] 5.7 `.env.example`
+- [x] 5.8 *(agregado durante esta fase)* `App\Console\Commands\SetupAuditInfrastructure`: provisión idempotente en local de la cola SQS + su DLQ (con redrive policy), la regla de EventBridge que rutea el bus hacia esa cola, la tabla DynamoDB y el bucket S3
+- [x] 5.9 *(agregado durante esta fase, retroactivo en `bp-common`)* `Aws\Sqs\SqsClient` como singleton compartido en `bp-common` (`bp-common.sqs.*`), reutilizable también por Notificaciones en la Fase 6
 
 ---
 

@@ -39,4 +39,11 @@ return [
         'endpoint' => env('AWS_DYNAMODB_ENDPOINT', env('AWS_ENDPOINT_URL')),
         'region' => env('AWS_REGION', 'us-east-1'),
     ],
+
+    // Colas SQS de los consumidores de eventos (Auditoria, Notificaciones).
+    // endpoint vacio = AWS real; en local apunta a LocalStack.
+    'sqs' => [
+        'endpoint' => env('AWS_SQS_ENDPOINT', env('AWS_ENDPOINT_URL')),
+        'region' => env('AWS_REGION', 'us-east-1'),
+    ],
 ];

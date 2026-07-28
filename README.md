@@ -163,7 +163,33 @@ Correr sus tests: `php artisan test` (11 tests, contra el MySQL/Redis/LocalStack
 
 Construir su imagen: `docker build -f services/svc-transferencias/Dockerfile -t bp/svc-transferencias .` desde la raíz del repo.
 
-*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 5 en adelante.)*
+#### `services/svc-auditoria` (Fase 5)
+
+Consumidor de eventos de dominio: registra en DynamoDB (con hash de integridad) toda acción publicada por otros servicios, y archiva cada registro en un bucket S3 (stand-in local del WORM Object Lock de AWS). No expone HTTP — es un worker puro.
+
+```bash
+cd services/svc-auditoria
+cp .env.example .env
+composer install
+
+# Provisionar la infraestructura local (una sola vez; make up ya debe estar corriendo):
+php artisan audit:setup-infrastructure   # crea la cola SQS + su DLQ, la regla de EventBridge, la tabla DynamoDB y el bucket S3
+```
+
+> Ojo: a diferencia de la tabla DynamoDB (que persiste entre reinicios de `docker-compose`), el bus/regla de EventBridge de LocalStack **no sobrevive** un reinicio del contenedor — si `make down && make up` se corrió después de provisionar, hay que volver a correr `audit:setup-infrastructure` (y el `events:setup-bus` de `svc-movimientos`) antes de seguir.
+
+Correr el consumidor:
+
+```bash
+php artisan audit:consume          # long-polling continuo (Ctrl+C para parar)
+php artisan audit:consume --once   # procesa un solo ciclo y termina (para probar a mano)
+```
+
+Correr sus tests: `php artisan test` (9 tests contra el DynamoDB/S3/SQS/EventBridge reales de `docker-compose`, incluyendo un test end-to-end: publica un evento real → lo consume → lo verifica persistido).
+
+Construir su imagen: `docker build -f services/svc-auditoria/Dockerfile -t bp/svc-auditoria .` desde la raíz del repo (no lleva Swoole: es un worker, no sirve HTTP).
+
+*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 6 en adelante.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
@@ -188,4 +214,4 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`) y Fase 4 (`services/svc-transferencias`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.
+- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`), Fase 4 (`services/svc-transferencias`) y Fase 5 (`services/svc-auditoria`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.

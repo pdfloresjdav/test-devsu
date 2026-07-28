@@ -18,6 +18,7 @@ use BP\Common\Http\CorrelationIdMiddleware;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
 use Aws\EventBridge\EventBridgeClient;
+use Aws\Sqs\SqsClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use Illuminate\Contracts\Http\Kernel;
@@ -78,6 +79,13 @@ class BpCommonServiceProvider extends ServiceProvider
         ]));
 
         $this->app->singleton(Marshaler::class, fn () => new Marshaler());
+
+        $this->app->singleton(SqsClient::class, fn () => new SqsClient([
+            'version' => 'latest',
+            'region' => config('bp-common.sqs.region'),
+            'endpoint' => config('bp-common.sqs.endpoint') ?: null,
+            'credentials' => $this->resolveAwsCredentials(),
+        ]));
     }
 
     /**
