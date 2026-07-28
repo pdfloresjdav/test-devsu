@@ -64,3 +64,23 @@ Bitácora cronológica del desarrollo. Cada entrada corresponde a uno o más ít
 - **Cómo se verificó:** relectura completa de las 14 decisiones (sección 3) y las 7 consideraciones transversales (sección 9) del documento de arquitectura, cruzadas ítem por ítem contra las 13 fases del checklist.
 - **Desviaciones:** ninguna — son adiciones de alcance ya documentado en la arquitectura, no cambios de arquitectura.
 - **Bloqueos / pendientes para retomar:** ninguno. Se confirmó además que este `WORKLOG.md` está al día (toda la Fase 0 tiene su entrada) y que `CLAUDE.md` sigue vigente; se le agregaron dos notas de convenciones (ver commit correspondiente): pin de `platform: linux/amd64` para imágenes Docker que fallen en Apple Silicon, y uso de `make up/down/logs` en vez de `docker compose` directo.
+
+## 2026-07-28 (continuación — Fase 1: `packages/bp-common`)
+
+- **Ítem(s) del checklist:** 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8
+- **Qué se hizo:**
+  - Se creó el paquete Composer `bp/common` (`packages/bp-common`) con PSR-4 `BP\Common\`.
+  - `Auth\JwtValidator` + `Auth\DiscoveryJwksProvider`: validan un JWT (firma, `exp`, `iss`, `aud`) resolviendo el JWKS del emisor vía el documento de discovery OIDC estándar (`/.well-known/openid-configuration`), con cache en memoria de proceso (`ArrayJwksCache`, TTL configurable). El mismo código sirve para el mock-oidc local y para Auth0 real — solo cambia el emisor por `.env`.
+  - `Auth\DpopValidator`: valida un DPoP proof (RFC 9449) — firma con la clave embebida en el header, `htm`/`htu` contra la request real, frescura de `iat`, anti-replay por `jti` (`InMemoryDpopReplayStore`), y opcionalmente el amarre `cnf.jkt` del access token vía JWK Thumbprint (RFC 7638). Activable por `.env` (`DPOP_ENFORCED`).
+  - `Auth\JwtAuthMiddleware`: ata JWT + DPoP en un solo middleware de Laravel, devolviendo el envelope de error estándar en 401.
+  - `Http\CorrelationIdMiddleware` y `Http\ApiResponse`: correlation-id por request (genera o propaga `X-Correlation-Id`) y envelope común `{data, meta}` / `{error: {code, message, errors}}`.
+  - `Health\HealthCheckController` + `BpCommonServiceProvider`: cualquier servicio que instale el paquete obtiene `GET /health` automáticamente (auto-discovery de Laravel), sin declarar nada.
+  - 20 tests (PHPUnit + Orchestra Testbench): unitarios de `JwtValidator` (firma válida/inválida, expiración, issuer/audience) y `DpopValidator` (proof válido, método/URL/iat/replay/cnf.jkt incorrectos), más tests de integración del middleware JWT, Correlation-Id y `/health` sobre una app Laravel real en memoria.
+- **Cómo se verificó:**
+  - `composer install` sin errores (ver desviación de seguridad abajo).
+  - `./vendor/bin/phpunit` → 20 tests, 34 assertions, en verde, sin warnings.
+  - Verificación end-to-end del ítem 1.8: se creó una app Laravel 12 desechable fuera del repo (`composer create-project laravel/laravel`), se agregó `packages/bp-common` como path-repository (`composer config repositories.bp-common path ...`), se corrió `composer require bp/common:@dev` (instaló por symlink), `php artisan route:list` mostró `GET /health` auto-registrada, y `php artisan serve` + `curl http://127.0.0.1:8321/health` devolvió `{"data":{"status":"ok",...}}`. La app desechable se borró después de verificar (no es parte del repo).
+- **Desviaciones respecto a la arquitectura o al checklist:**
+  - `firebase/php-jwt` en la franja `^6.10` tiene un advisory de seguridad activo (`PKSA-y2cr-5h3j-g3ys`); se subió la dependencia a `^7.0` (segura) en vez de ignorar el advisory. Sin impacto funcional.
+  - El ítem 1.2 original planteaba un modo local con "clave RSA propia" separado del modo Auth0. Al implementarlo se detectó que el mock-oidc ya expone un JWKS real (visto en la Fase 0), así que se unificó a un solo flujo de validación por JWKS para ambos modos — más simple y más fiel a producción. Ya se había ajustado la redacción del ítem en el checklist antes de empezar a programar (ver auditoría previa).
+- **Bloqueos / pendientes para retomar:** Fase 1 completa. Siguiente paso: Fase 2 (`services/svc-datos-basicos`).

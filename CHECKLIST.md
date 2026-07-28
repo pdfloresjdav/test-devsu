@@ -37,14 +37,14 @@
 
 **Criterio de aceptación:** el paquete tiene tests unitarios en verde y puede instalarse como path-repository desde un servicio de prueba.
 
-- [ ] 1.1 Scaffold del paquete Composer (`packages/bp-common`)
-- [ ] 1.2 Middleware de validación JWT con dos modos por `.env` (`OAUTH_MODE=local` con clave RSA propia / `OAUTH_MODE=auth0` con JWKS remoto)
-- [ ] 1.3 Soporte de verificación DPoP (Proof-of-Possession) en el middleware de auth, activable por `.env` (`DPOP_ENFORCED=true|false`) — decisión 3.6 del documento de arquitectura; puede quedar deshabilitado por defecto en local si el mock-oidc no emite DPoP, pero la validación debe existir y tener test
-- [ ] 1.4 Middleware de Correlation-Id para trazabilidad entre servicios
-- [ ] 1.5 Formato estándar de respuesta y de error de la API (envelope común)
-- [ ] 1.6 Trait/endpoint de healthcheck reutilizable (`GET /health`)
-- [ ] 1.7 Tests unitarios del paquete
-- [ ] 1.8 Confirmar que un servicio puede requerirlo vía path-repository en `composer.json`
+- [x] 1.1 Scaffold del paquete Composer (`packages/bp-common`)
+- [x] 1.2 Middleware de validación JWT vía JWKS remoto, con el emisor configurable por `.env` (`OIDC_ISSUER`/`OAUTH_MODE=local` apunta al mock-oidc, que expone un JWKS real; `OAUTH_MODE=auth0` apunta al tenant real) — un solo flujo de validación para ambos modos, sin lógica de clave local separada
+- [x] 1.3 Soporte de verificación DPoP (Proof-of-Possession) en el middleware de auth, activable por `.env` (`DPOP_ENFORCED=true|false`) — decisión 3.6 del documento de arquitectura; puede quedar deshabilitado por defecto en local si el mock-oidc no emite DPoP, pero la validación debe existir y tener test
+- [x] 1.4 Middleware de Correlation-Id para trazabilidad entre servicios
+- [x] 1.5 Formato estándar de respuesta y de error de la API (envelope común)
+- [x] 1.6 Trait/endpoint de healthcheck reutilizable (`GET /health`)
+- [x] 1.7 Tests unitarios del paquete
+- [x] 1.8 Confirmar que un servicio puede requerirlo vía path-repository en `composer.json`
 
 ---
 

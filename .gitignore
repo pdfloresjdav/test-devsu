@@ -11,6 +11,13 @@ Thumbs.db
 node_modules/
 npm-debug.log*
 
+# PHP / Composer
+vendor/
+.phpunit.result.cache
+# packages/* son librerias (no apps): no se commitea su lock, cada consumidor resuelve el suyo.
+# Los servicios en services/* SI deben commitear su composer.lock (son aplicaciones).
+packages/*/composer.lock
+
 # Salidas de exportación generadas localmente
 *.pdf
 *.png
