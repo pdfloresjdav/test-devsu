@@ -116,7 +116,31 @@ Construir su imagen (Octane + Swoole, igual que en producción) desde la **raíz
 docker build -f services/svc-datos-basicos/Dockerfile -t bp/svc-datos-basicos .
 ```
 
-*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 3 en adelante.)*
+#### `services/svc-movimientos` (Fase 3)
+
+Histórico de movimientos con patrón **Cache-Aside** (Redis) sobre un repositorio de **DynamoDB** (LocalStack en local, AWS real en producción — mismo código), y publicación del evento `MovementRegistered` a EventBridge al registrar un movimiento nuevo.
+
+```bash
+cd services/svc-movimientos
+cp .env.example .env
+composer install
+
+# Provisionar la infraestructura local (una sola vez; make up ya debe estar corriendo):
+php artisan movimientos:setup-table   # crea la tabla DynamoDB en LocalStack si no existe
+php artisan events:setup-bus          # crea el bus de EventBridge "bp-domain-events" si no existe
+
+php artisan serve --port=8002
+```
+
+Endpoints (requieren `Authorization: Bearer <JWT>`):
+- `GET /cuentas/{id}/movimientos` — historial, más reciente primero (Cache-Aside: la primera lectura pega a DynamoDB, las siguientes a Redis hasta que se registre un movimiento nuevo o expire el TTL).
+- `POST /cuentas/{id}/movimientos` — registra un movimiento (`tipo`: `debito`|`credito`, `monto`, `descripcion`), invalida la caché de esa cuenta y publica `MovementRegistered`.
+
+Correr sus tests: `php artisan test` (9 tests, corren contra el Redis y el LocalStack reales de `docker-compose` — no hay mocks del SDK de AWS).
+
+Construir su imagen: `docker build -f services/svc-movimientos/Dockerfile -t bp/svc-movimientos .` desde la raíz del repo.
+
+*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 4 en adelante.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
@@ -141,4 +165,4 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`) y Fase 2 (`services/svc-datos-basicos`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.
+- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`) y Fase 3 (`services/svc-movimientos`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.

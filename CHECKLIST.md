@@ -45,6 +45,7 @@
 - [x] 1.6 Trait/endpoint de healthcheck reutilizable (`GET /health`)
 - [x] 1.7 Tests unitarios del paquete
 - [x] 1.8 Confirmar que un servicio puede requerirlo vía path-repository en `composer.json`
+- [x] 1.9 *(agregado durante la Fase 3, por ser código genuinamente compartido)* `Events\EventPublisherInterface` + `EventBridgeEventPublisher`, y clientes compartidos `Aws\DynamoDb\DynamoDbClient` / `Aws\EventBridge\EventBridgeClient` configurados por `.env` (mismo patrón local/AWS real que el resto del paquete) — evita que cada servicio productor de eventos (Movimientos, Transferencias) o consumidor de DynamoDB (Auditoría) reimplemente esta configuración
 
 ---
 
@@ -66,13 +67,13 @@
 
 **Criterio de aceptación:** el patrón Cache-Aside se puede demostrar con un test (primera lectura pega a la "base", segunda lectura pega a caché) y los tests pasan.
 
-- [ ] 3.1 Scaffold Laravel + Octane + Dockerfile
-- [ ] 3.2 Repository de movimientos: driver `dynamodb-local` (vía LocalStack/DynamoDB Local) y driver `dynamodb` real, tras interfaz `MovimientosRepository`
-- [ ] 3.3 Cache-Aside con Redis (ElastiCache-compatible) para últimos movimientos, con invalidación activa de la clave al registrarse un nuevo movimiento (decisión 3.8, no solo TTL)
-- [ ] 3.4 Endpoint `GET /cuentas/{id}/movimientos`
-- [ ] 3.5 Publicación del evento `MovementRegistered` al bus (interfaz `EventPublisher`, driver local EventBridge/SQS vía LocalStack)
-- [ ] 3.6 Tests (incluye test explícito del comportamiento Cache-Aside)
-- [ ] 3.7 `.env.example`
+- [x] 3.1 Scaffold Laravel + Octane + Dockerfile
+- [x] 3.2 Repository de movimientos sobre DynamoDB (`DynamoDbClient` compartido de `bp-common`, configurado por `.env`: endpoint de LocalStack en local, endpoint real de AWS en producción — mismo código, mismo patrón que la validación JWT vía JWKS), tras interfaz `MovimientosRepository`
+- [x] 3.3 Cache-Aside con Redis (ElastiCache-compatible) para últimos movimientos, con invalidación activa de la clave al registrarse un nuevo movimiento (decisión 3.8, no solo TTL)
+- [x] 3.4 Endpoints `GET /cuentas/{id}/movimientos` (consulta) y `POST /cuentas/{id}/movimientos` (registro) — el POST se agrega además de lo previsto originalmente porque sin un punto de escritura propio del servicio no hay forma de ejercer ni probar 3.3 (invalidación de caché) ni 3.5 (publicación del evento); en el diagrama de contenedores el propio Servicio Movimientos "lee/escribe" en DynamoDB, no solo lee
+- [x] 3.5 Publicación del evento `MovementRegistered` al bus al registrar un movimiento (usa `EventPublisherInterface` de `bp-common`, ya implementado sobre EventBridge/SQS vía LocalStack en local)
+- [x] 3.6 Tests (incluye test explícito del comportamiento Cache-Aside)
+- [x] 3.7 `.env.example`
 
 ---
 

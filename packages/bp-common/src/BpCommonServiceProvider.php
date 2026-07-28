@@ -11,8 +11,13 @@ use BP\Common\Auth\JwksCacheInterface;
 use BP\Common\Auth\JwksProviderInterface;
 use BP\Common\Auth\JwtAuthMiddleware;
 use BP\Common\Auth\JwtValidator;
+use BP\Common\Events\EventBridgeEventPublisher;
+use BP\Common\Events\EventPublisherInterface;
 use BP\Common\Health\HealthCheckController;
 use BP\Common\Http\CorrelationIdMiddleware;
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\DynamoDb\Marshaler;
+use Aws\EventBridge\EventBridgeClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use Illuminate\Contracts\Http\Kernel;
@@ -51,6 +56,45 @@ class BpCommonServiceProvider extends ServiceProvider
             dpopValidator: $app->make(DpopValidator::class),
             dpopEnforced: (bool) config('bp-common.dpop.enforced', false),
         ));
+
+        $this->app->singleton(EventBridgeClient::class, fn () => new EventBridgeClient([
+            'version' => 'latest',
+            'region' => config('bp-common.events.region'),
+            'endpoint' => config('bp-common.events.endpoint') ?: null,
+            'credentials' => $this->resolveAwsCredentials(),
+        ]));
+
+        $this->app->singleton(EventPublisherInterface::class, fn ($app) => new EventBridgeEventPublisher(
+            client: $app->make(EventBridgeClient::class),
+            eventBusName: config('bp-common.events.event_bus_name'),
+            source: config('bp-common.events.source'),
+        ));
+
+        $this->app->singleton(DynamoDbClient::class, fn () => new DynamoDbClient([
+            'version' => 'latest',
+            'region' => config('bp-common.dynamodb.region'),
+            'endpoint' => config('bp-common.dynamodb.endpoint') ?: null,
+            'credentials' => $this->resolveAwsCredentials(),
+        ]));
+
+        $this->app->singleton(Marshaler::class, fn () => new Marshaler());
+    }
+
+    /**
+     * @return array{key: string, secret: string}|null
+     */
+    private function resolveAwsCredentials(): ?array
+    {
+        // LocalStack acepta cualquier credencial; en AWS real se debe usar el
+        // IAM Task Role del servicio (decision 3.14) y no definir estas env vars.
+        if (! env('AWS_ACCESS_KEY_ID')) {
+            return null;
+        }
+
+        return [
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        ];
     }
 
     public function boot(Router $router): void
