@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\MovimientosRepository;
+use BP\Common\Auth\JwtClaims;
 use BP\Common\Events\EventPublisherInterface;
 use BP\Common\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -38,7 +39,7 @@ class MovimientoController extends Controller
             $validated['descripcion'],
         );
 
-        $this->events->publish('MovementRegistered', $movimiento);
+        $this->events->publish('MovementRegistered', $movimiento + ['actor' => JwtClaims::actor($request)]);
 
         return ApiResponse::success($movimiento, status: 201);
     }

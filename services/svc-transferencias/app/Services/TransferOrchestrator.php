@@ -32,6 +32,7 @@ class TransferOrchestrator
         float $monto,
         string $descripcion,
         string $idempotencyKey,
+        string $actor = 'system',
     ): Transferencia {
         $transferencia = $this->debitarYCrearTransferencia(
             $cuentaOrigen,
@@ -45,7 +46,7 @@ class TransferOrchestrator
             $this->interbank->ejecutar($cuentaDestino, $monto);
             $transferencia->update(['estado' => Transferencia::ESTADO_COMPLETADA]);
 
-            $this->events->publish('TransferCompleted', $this->eventPayload($transferencia));
+            $this->events->publish('TransferCompleted', $this->eventPayload($transferencia, $actor));
         } catch (InterbankException $e) {
             $this->compensar($cuentaOrigen, $monto);
             $transferencia->update([
@@ -53,7 +54,7 @@ class TransferOrchestrator
                 'motivo_falla' => $e->getMessage(),
             ]);
 
-            $this->events->publish('TransferFailed', $this->eventPayload($transferencia));
+            $this->events->publish('TransferFailed', $this->eventPayload($transferencia, $actor));
         }
 
         return $transferencia->fresh();
@@ -97,7 +98,7 @@ class TransferOrchestrator
     /**
      * @return array<string, mixed>
      */
-    private function eventPayload(Transferencia $transferencia): array
+    private function eventPayload(Transferencia $transferencia, string $actor): array
     {
         return [
             'transferencia_id' => $transferencia->transferencia_id,
@@ -105,6 +106,7 @@ class TransferOrchestrator
             'cuenta_destino' => $transferencia->cuenta_destino,
             'monto' => (float) $transferencia->monto,
             'estado' => $transferencia->estado,
+            'actor' => $actor,
         ];
     }
 }

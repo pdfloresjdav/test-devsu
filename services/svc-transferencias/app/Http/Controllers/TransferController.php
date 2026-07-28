@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Contracts\SaldoInsuficienteException;
 use App\Services\TransferOrchestrator;
+use BP\Common\Auth\JwtClaims;
 use BP\Common\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class TransferController extends Controller
                 (float) $validated['monto'],
                 $validated['descripcion'] ?? '',
                 $idempotencyKey,
+                JwtClaims::actor($request),
             );
         } catch (SaldoInsuficienteException $e) {
             return ApiResponse::error($e->getMessage(), 'saldo_insuficiente', status: 422);
