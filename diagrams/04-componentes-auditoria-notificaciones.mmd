@@ -1,0 +1,42 @@
+C4Component
+  title Diagrama de Componentes - Auditoria y Notificaciones (C4 Nivel 3)
+
+  Container(bus, "EventBridge + SQS (DLQ)", "Bus de eventos", "Entrega MovementRegistered, TransferCompleted, LoginSucceeded, etc.")
+
+  Container_Boundary(svcAudit, "Servicio Auditoria (Laravel Horizon Worker / ECS Fargate)") {
+    Component(auditConsumer, "Audit Event Consumer", "Laravel Queue Job", "Consume mensajes de SQS, deserializa el evento de dominio")
+    Component(auditWriter, "Audit Writer", "Repository (AWS SDK for PHP)", "Escribe el registro de auditoria con actor, accion, timestamp y hash")
+    Component(wormArchiver, "WORM Archiver", "Kinesis Firehose Consumer", "Envia el stream de DynamoDB hacia S3 con Object Lock (Compliance mode)")
+    ComponentDb(dynAudit, "DynamoDB Auditoria", "Amazon DynamoDB", "Consulta rapida de auditoria reciente")
+    ComponentDb(s3Worm, "S3 Object Lock", "Amazon S3 (WORM)", "Retencion inmutable de largo plazo")
+  }
+
+  Container_Boundary(svcNotif, "Servicio Notificaciones (Laravel Horizon Worker / ECS Fargate)") {
+    Component(notifConsumer, "Notification Event Consumer", "Laravel Queue Job", "Consume el evento y decide que notificar")
+    Component(channelRouter, "Channel Router", "Application Service", "Selecciona canal(es): push, SMS o email segun preferencia y criticidad")
+    Component(templateEngine, "Template Engine", "Laravel Blade / Markdown Mail", "Genera el contenido segun tipo de evento e idioma del cliente")
+    Component(pinpointAdapter, "Pinpoint Adapter", "AWS SDK for PHP", "Envia push (FCM/APNs) y SMS via Amazon Pinpoint")
+    Component(sesAdapter, "SES Adapter", "AWS SDK for PHP", "Envia email transaccional via Amazon SES")
+    Component(deliveryTracker, "Delivery Tracker", "Repository", "Registra el estado de entrega para evidencia regulatoria")
+  }
+
+  System_Ext(fcmApns, "FCM / APNs", "Push nativo")
+  System_Ext(pinpoint, "Amazon Pinpoint", "Orquestacion multicanal")
+  System_Ext(ses, "Amazon SES", "Email transaccional")
+
+  Rel(bus, auditConsumer, "Entrega evento", "SQS")
+  Rel(auditConsumer, auditWriter, "Invoca", "in-process")
+  Rel(auditWriter, dynAudit, "PutItem", "AWS SDK")
+  Rel(dynAudit, wormArchiver, "DynamoDB Streams", "Kinesis Firehose")
+  Rel(wormArchiver, s3Worm, "Escribe objeto inmutable", "AWS SDK / TLS")
+
+  Rel(bus, notifConsumer, "Entrega evento", "SQS")
+  Rel(notifConsumer, channelRouter, "Invoca", "in-process")
+  Rel(channelRouter, templateEngine, "Genera contenido", "in-process")
+  Rel(channelRouter, pinpointAdapter, "Push/SMS", "in-process")
+  Rel(channelRouter, sesAdapter, "Email", "in-process")
+  Rel(pinpointAdapter, pinpoint, "SendMessages", "AWS SDK/HTTPS")
+  Rel(pinpoint, fcmApns, "Entrega push nativo", "HTTPS")
+  Rel(sesAdapter, ses, "SendEmail", "AWS SDK/HTTPS")
+  Rel(pinpointAdapter, deliveryTracker, "Registra resultado", "in-process")
+  Rel(sesAdapter, deliveryTracker, "Registra resultado", "in-process")

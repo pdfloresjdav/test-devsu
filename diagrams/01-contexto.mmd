@@ -1,0 +1,22 @@
+C4Context
+  title Diagrama de Contexto - Sistema de Banca Digital BP (C4 Nivel 1)
+
+  Person(cliente, "Cliente de BP", "Titular de cuentas que consulta movimientos, hace transferencias y pagos desde la SPA o la app movil")
+
+  System(bp, "Sistema de Banca Digital BP", "Permite a los clientes consultar su historico de movimientos, realizar transferencias y pagos entre cuentas propias e interbancarias")
+
+  System_Ext(core, "Core Bancario", "Sistema de registro oficial: datos basicos del cliente, movimientos y productos")
+  System_Ext(crm, "Sistema Complementario de Cliente", "Informacion detallada/extendida del cliente que no vive en el Core")
+  System_Ext(idp, "Auth0 / Okta CIC", "Proveedor de identidad: OAuth2/OIDC, MFA adaptativo, passkeys")
+  System_Ext(kyc, "Proveedor KYC (Onfido / iProov)", "Verificacion de identidad con documento + selfie + prueba de vida durante el onboarding")
+  System_Ext(interbank, "Red Interbancaria / Bancos Externos", "Procesa transferencias hacia cuentas de otras entidades")
+  System_Ext(push, "FCM / APNs", "Entrega de notificaciones push a dispositivos moviles")
+
+  Rel(cliente, bp, "Se autentica, consulta movimientos, transfiere y paga", "HTTPS")
+  Rel(bp, core, "Consulta datos basicos, movimientos y productos", "API REST sobre HTTPS")
+  Rel(bp, crm, "Consulta informacion detallada del cliente", "API REST sobre HTTPS")
+  Rel(bp, idp, "Delega autenticacion y autorizacion", "OAuth2 / OIDC")
+  Rel(bp, kyc, "Envia documento y selfie para verificar identidad en el onboarding", "API REST sobre HTTPS")
+  Rel(bp, interbank, "Ejecuta transferencias interbancarias", "API REST sobre HTTPS con mTLS")
+  Rel(bp, push, "Envia notificaciones de movimientos", "HTTPS")
+  Rel(idp, cliente, "Solicita segundo factor / biometria en el dispositivo", "WebAuthn / FIDO2")
