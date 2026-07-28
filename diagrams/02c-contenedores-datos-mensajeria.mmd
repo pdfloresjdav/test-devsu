@@ -1,0 +1,30 @@
+C4Container
+  title Diagrama de Contenedores (3/3) - Persistencia y Mensajeria
+
+  System_Boundary(bp, "Sistema de Banca Digital BP") {
+    Container(svcMov, "Servicio Movimientos", "Laravel Octane en ECS Fargate", "Ver detalle en vista 2/3")
+    Container(svcTransf, "Servicio Transferencias", "Laravel Octane en ECS Fargate", "Ver detalle en vista 2/3")
+    Container(svcAudit, "Servicio Auditoria", "Laravel Horizon en ECS Fargate", "Persiste el rastro inmutable")
+    Container(svcNotif, "Servicio Notificaciones", "Laravel Horizon en ECS Fargate", "Despacha notificaciones multicanal")
+
+    ContainerDb(cache, "Cache", "Amazon ElastiCache Redis", "Cache-Aside de saldos y ultimos movimientos")
+    ContainerDb(aurora, "Base Transaccional", "Amazon Aurora MySQL Multi-AZ", "Cuentas, saldos, idempotencia")
+    ContainerDb(dynMov, "Movimientos", "Amazon DynamoDB", "Historico de alto volumen")
+    ContainerDb(dynAudit, "Auditoria", "DynamoDB + S3 Object Lock", "Rastro inmutable de auditoria")
+
+    Container(bus, "Bus de Eventos", "Amazon EventBridge + SQS (DLQ)", "Desacopla productores de consumidores")
+  }
+
+  System_Ext(pinpoint, "Amazon Pinpoint", "Orquestacion push/SMS")
+  System_Ext(ses, "Amazon SES", "Email transaccional")
+
+  Rel(svcMov, dynMov, "Lee/escribe", "AWS SDK")
+  Rel(svcMov, cache, "Cache-Aside", "Redis Protocol")
+  Rel(svcTransf, aurora, "Debita/acredita (ACID)", "SQL/TLS")
+  Rel(svcMov, bus, "Publica evento", "EventBridge")
+  Rel(svcTransf, bus, "Publica evento", "EventBridge")
+  Rel(bus, svcAudit, "Entrega evento", "SQS")
+  Rel(bus, svcNotif, "Entrega evento", "SQS")
+  Rel(svcAudit, dynAudit, "Persiste rastro inmutable", "AWS SDK")
+  Rel(svcNotif, pinpoint, "Envia push/SMS", "AWS SDK")
+  Rel(svcNotif, ses, "Envia email", "AWS SDK")

@@ -1,0 +1,18 @@
+C4Component
+  title Diagrama de Componentes (1/2) - Transferencias: Recepcion y Control de Acceso
+
+  System_Ext(idp, "Auth0", "Emisor del JWT / JWKS")
+
+  Container_Boundary(svcTransf, "Servicio Transferencias (Laravel Octane / ECS Fargate)") {
+    Component(controller, "Transfer Controller", "Laravel Controller", "Expone POST /transfers")
+    Component(authMw, "Auth Middleware", "auth0/laravel-auth0", "Valida el JWT contra el JWKS de Auth0")
+    Component(idemMw, "Idempotency Middleware", "Laravel Middleware + Redis", "Verifica Idempotency-Key antes de procesar")
+    Component(orchestrator, "Transfer Orchestrator", "Application Service (Saga)", "Ver detalle en vista 2/2")
+    ComponentDb(redisDb, "Redis", "Amazon ElastiCache", "Idempotency-Keys con TTL")
+  }
+
+  Rel(controller, authMw, "Pasa por", "in-process")
+  Rel(authMw, idp, "Valida firma", "JWKS/HTTPS")
+  Rel(authMw, idemMw, "Pasa por", "in-process")
+  Rel(idemMw, redisDb, "Lee/escribe clave", "Redis Protocol")
+  Rel(idemMw, orchestrator, "Invoca", "in-process")

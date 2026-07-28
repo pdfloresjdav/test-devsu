@@ -9,18 +9,25 @@ Diseño de arquitectura de solución (modelo C4) para el sistema de banca por in
 ├── README.md
 ├── .gitignore
 ├── docs/
-│   └── arquitectura-banca-digital-bp.md   # Documento completo: decisiones, diagramas C4 y consideraciones transversales
+│   ├── arquitectura-banca-digital-bp.md   # Documento completo: decisiones, diagramas C4 e imágenes embebidas
+│   └── arquitectura-banca-digital-bp.pdf  # Entregable en PDF (mismo contenido, listo para imprimir/subir)
 └── diagrams/
-    ├── 01-contexto.mmd                              # C4 Nivel 1 (contexto)
-    ├── 02-contenedores.mmd                          # C4 Nivel 2 (contenedores)
-    ├── 03-componentes-transferencias.mmd            # C4 Nivel 3 (componentes: Transferencias)
-    ├── 04-componentes-auditoria-notificaciones.mmd  # C4 Nivel 3 (componentes: Auditoría/Notificaciones)
-    ├── 05-despliegue.mmd                            # C4 Despliegue (infraestructura AWS, Multi-AZ + DR)
-    ├── 06-secuencia-transferencia.mmd               # C4 Dinámico (secuencia: transferencia interbancaria)
-    └── 07-secuencia-onboarding.mmd                  # C4 Dinámico (secuencia: onboarding + login recurrente)
+    ├── 01-contexto.mmd                                  # C4 Nivel 1 (contexto)
+    ├── 02a-contenedores-frontend-edge.mmd                # C4 Nivel 2 (1/3): frontend, edge y autenticación
+    ├── 02b-contenedores-microservicios.mmd               # C4 Nivel 2 (2/3): microservicios de negocio
+    ├── 02c-contenedores-datos-mensajeria.mmd             # C4 Nivel 2 (3/3): persistencia y mensajería
+    ├── 03a-componentes-transferencias-recepcion.mmd      # C4 Nivel 3 (1/2): Transferencias - recepción
+    ├── 03b-componentes-transferencias-orquestacion.mmd   # C4 Nivel 3 (2/2): Transferencias - orquestación
+    ├── 04-componentes-auditoria-notificaciones.mmd       # C4 Nivel 3: Auditoría/Notificaciones
+    ├── 05-despliegue.mmd                                 # C4 Despliegue (infraestructura AWS, Multi-AZ + DR)
+    ├── 06-secuencia-transferencia.mmd                    # C4 Dinámico (secuencia: transferencia interbancaria)
+    ├── 07-secuencia-onboarding.mmd                       # C4 Dinámico (secuencia: onboarding + login recurrente)
+    └── png/                                              # Todos los diagramas anteriores ya renderizados a imagen
 ```
 
-El documento principal está en [`docs/arquitectura-banca-digital-bp.md`](docs/arquitectura-banca-digital-bp.md) e incluye los diagramas embebidos como bloques Mermaid (se renderizan automáticamente en GitHub, GitLab, VS Code y Obsidian). Los archivos `.mmd` en `diagrams/` son la misma fuente de cada diagrama, aislada para poder editarla o renderizarla por separado.
+El documento principal está en [`docs/arquitectura-banca-digital-bp.md`](docs/arquitectura-banca-digital-bp.md), con los diagramas embebidos como **imágenes PNG** (no solo código), y su versión exportada en [`docs/arquitectura-banca-digital-bp.pdf`](docs/arquitectura-banca-digital-bp.pdf). Los archivos `.mmd` en `diagrams/` son la fuente editable de cada diagrama (sintaxis [Mermaid](https://mermaid.js.org/), compatible con el estándar C4); `diagrams/png/` contiene el resultado ya renderizado que se usa en el documento y en el PDF.
+
+El diagrama de Contenedores y el de Componentes de Transferencias se dividieron en varias vistas complementarias (en vez de un único diagrama saturado) para que cada una se pueda leer con claridad — práctica habitual en C4 cuando un diagrama crece demasiado.
 
 ## Stack propuesto
 
@@ -32,14 +39,10 @@ El documento principal está en [`docs/arquitectura-banca-digital-bp.md`](docs/a
 - **Mensajería:** Amazon EventBridge + SQS.
 - **Notificaciones:** Amazon Pinpoint (push/SMS) + Amazon SES (email).
 
-## Cómo exportar el documento a PDF
+## Cómo se regenera el PDF
 
-El documento es Markdown puro con diagramas Mermaid embebidos. Opciones recomendadas para exportar a PDF conservando los diagramas renderizados:
-
-- **VS Code:** extensión "Markdown Preview Enhanced" → *Export → PDF* (renderiza Mermaid de forma nativa).
-- **Pandoc:** `pandoc docs/arquitectura-banca-digital-bp.md -o arquitectura-BP.pdf --pdf-engine=xelatex --filter mermaid-filter` (requiere `mermaid-filter` instalado vía npm).
-- **GitHub:** al subir el repositorio, el documento se renderiza directamente en la interfaz web con los diagramas incluidos.
+Los diagramas se renderizan con `@mermaid-js/mermaid-cli` y el documento se convierte a PDF con Chrome headless a partir de una versión HTML intermedia. Ambos pasos son reproducibles localmente sin instalar nada de forma permanente (se usa `npx` con un directorio de caché temporal). Si se edita algún `.mmd`, hay que volver a renderizar su PNG en `diagrams/png/` y regenerar el PDF.
 
 ## Estado
 
-Documento de arquitectura v1.0 — pendiente de revisión.
+Documento de arquitectura v1.1 — diagramas C4 completos (contexto, contenedores, componentes), diagrama de despliegue y diagramas dinámicos de los flujos de transferencia y onboarding.

@@ -55,7 +55,7 @@ Stack tecnológico principal: **React + TypeScript** (SPA), **React Native + Typ
 | Auditoría de todas las acciones del cliente | DynamoDB + S3 Object Lock (WORM) |
 | Caché/persistencia para clientes frecuentes | Cache-Aside con ElastiCache Redis |
 | Capa de integración vía API Gateway | Amazon API Gateway + patrón BFF, 3 servicios iniciales extensibles |
-| Normativa financiera, HA, DR, seguridad, monitoreo, auto-healing | Ver [sección 7](#7-consideraciones-transversales) |
+| Normativa financiera, HA, DR, seguridad, monitoreo, auto-healing | Ver [sección 9](#9-consideraciones-transversales) |
 
 ---
 
@@ -159,30 +159,7 @@ Cada decisión incluye al menos dos justificaciones teóricas y las alternativas
 
 **Lectura del diagrama:** el cliente interactúa únicamente con el "Sistema de Banca Digital BP". Ese sistema, a su vez, se apoya en seis sistemas externos: el Core Bancario (fuente oficial de datos, movimientos y productos), un sistema complementario que enriquece el perfil del cliente, un proveedor de identidad (Auth0/Okta) que gestiona el login y la autenticación fuerte, un proveedor especializado de verificación de identidad (Onfido/iProov) usado durante el alta de un nuevo cliente, la red interbancaria por donde salen las transferencias hacia otras entidades, y los servicios de notificación push del propio teléfono (FCM/APNs).
 
-```mermaid
-C4Context
-  title Diagrama de Contexto - Sistema de Banca Digital BP (C4 Nivel 1)
-
-  Person(cliente, "Cliente de BP", "Titular de cuentas que consulta movimientos, hace transferencias y pagos desde la SPA o la app movil")
-
-  System(bp, "Sistema de Banca Digital BP", "Permite a los clientes consultar su historico de movimientos, realizar transferencias y pagos entre cuentas propias e interbancarias")
-
-  System_Ext(core, "Core Bancario", "Sistema de registro oficial: datos basicos del cliente, movimientos y productos")
-  System_Ext(crm, "Sistema Complementario de Cliente", "Informacion detallada/extendida del cliente que no vive en el Core")
-  System_Ext(idp, "Auth0 / Okta CIC", "Proveedor de identidad: OAuth2/OIDC, MFA adaptativo, passkeys")
-  System_Ext(kyc, "Proveedor KYC (Onfido / iProov)", "Verificacion de identidad con documento + selfie + prueba de vida durante el onboarding")
-  System_Ext(interbank, "Red Interbancaria / Bancos Externos", "Procesa transferencias hacia cuentas de otras entidades")
-  System_Ext(push, "FCM / APNs", "Entrega de notificaciones push a dispositivos moviles")
-
-  Rel(cliente, bp, "Se autentica, consulta movimientos, transfiere y paga", "HTTPS")
-  Rel(bp, core, "Consulta datos basicos, movimientos y productos", "API REST sobre HTTPS")
-  Rel(bp, crm, "Consulta informacion detallada del cliente", "API REST sobre HTTPS")
-  Rel(bp, idp, "Delega autenticacion y autorizacion", "OAuth2 / OIDC")
-  Rel(bp, kyc, "Envia documento y selfie para verificar identidad en el onboarding", "API REST sobre HTTPS")
-  Rel(bp, interbank, "Ejecuta transferencias interbancarias", "API REST sobre HTTPS con mTLS")
-  Rel(bp, push, "Envia notificaciones de movimientos", "HTTPS")
-  Rel(idp, cliente, "Solicita segundo factor / biometria en el dispositivo", "WebAuthn / FIDO2")
-```
+![Diagrama de Contexto - Sistema de Banca Digital BP](../diagrams/png/01-contexto.png)
 
 ---
 
@@ -190,82 +167,25 @@ C4Context
 
 **Audiencia:** técnica (arquitectura, desarrollo, operaciones).
 
-**Lectura del diagrama:** el cliente accede vía SPA (React) o app móvil (React Native), ambas pasando por WAF/CloudFront y Amazon API Gateway. El Gateway enruta hacia un BFF por canal (Laravel Octane), que a su vez consulta tres microservicios de negocio (Datos Básicos, Movimientos, Transferencias) y delega en un bus de eventos (EventBridge + SQS) a los servicios asíncronos de Auditoría y Notificaciones. La persistencia se distribuye según el patrón de acceso: Aurora MySQL para el dominio transaccional, DynamoDB para movimientos y auditoría, y Redis como caché.
+Por la cantidad de contenedores del sistema (21 en total), se documenta en **3 vistas complementarias** en vez de un único diagrama saturado — práctica habitual en C4 cuando un diagrama de contenedores crece demasiado para leerse de un vistazo. Las tres vistas comparten elementos de borde para mantener el contexto entre sí.
 
-```mermaid
-C4Container
-  title Diagrama de Contenedores - Sistema de Banca Digital BP (C4 Nivel 2)
+### 5.1 Vista 1/3 — Frontend, Edge y Autenticación
 
-  Person(cliente, "Cliente de BP", "Usuario final")
+**Lectura del diagrama:** el cliente accede vía SPA (React) o app móvil (React Native), ambas pasando por WAF/CloudFront y Amazon API Gateway, que valida el JWT contra el JWKS de Auth0 antes de enrutar hacia el BFF correspondiente a cada canal.
 
-  System_Boundary(bp, "Sistema de Banca Digital BP") {
+![Diagrama de Contenedores 1/3 - Frontend, Edge y Autenticación](../diagrams/png/02a-contenedores-frontend-edge.png)
 
-    Container(spa, "SPA Web", "React + TypeScript", "Portal transaccional para navegador de escritorio")
-    Container(mobile, "App Movil", "React Native + TypeScript", "Onboarding con reconocimiento facial, login biometrico, movimientos y transferencias")
+### 5.2 Vista 2/3 — Microservicios de Negocio
 
-    Container(waf, "Edge / WAF", "AWS WAF + CloudFront", "Proteccion perimetral, TLS, mitigacion DDoS y OWASP Top 10")
+**Lectura del diagrama:** ambos BFF consultan los tres microservicios de negocio (Datos Básicos, Movimientos, Transferencias). Datos Básicos compone información del Core bancario y del sistema complementario; el BFF Móvil además orquesta el onboarding contra el proveedor KYC y AWS Rekognition; Transferencias llama a la red interbancaria y ambos servicios publican eventos de dominio al bus.
 
-    Container(apigw, "API Gateway", "Amazon API Gateway", "Enrutamiento, throttling, autorizacion JWT (JWKS de Auth0), mTLS hacia backend")
+![Diagrama de Contenedores 2/3 - Microservicios de Negocio](../diagrams/png/02b-contenedores-microservicios.png)
 
-    Container(bffWeb, "BFF Web", "Laravel Octane (PHP) en ECS Fargate", "Agrega y adapta datos para la SPA")
-    Container(bffMobile, "BFF Movil", "Laravel Octane (PHP) en ECS Fargate", "Agrega y adapta datos para la app movil, incluye orquestacion de onboarding KYC")
+### 5.3 Vista 3/3 — Persistencia y Mensajería
 
-    Container(svcDatos, "Servicio Datos Basicos", "Laravel Octane en ECS Fargate", "Compone datos del Core + sistema complementario de cliente")
-    Container(svcMov, "Servicio Movimientos", "Laravel Octane en ECS Fargate", "Consulta historico de movimientos con patron Cache-Aside")
-    Container(svcTransf, "Servicio Transferencias", "Laravel Octane en ECS Fargate", "Orquesta transferencias propias e interbancarias con Saga + Circuit Breaker")
-    Container(svcAudit, "Servicio Auditoria", "Laravel Horizon Workers en ECS Fargate", "Consume eventos de dominio y persiste el rastro inmutable de auditoria")
-    Container(svcNotif, "Servicio Notificaciones", "Laravel Horizon Workers en ECS Fargate", "Consume eventos y despacha notificaciones multicanal")
+**Lectura del diagrama:** Movimientos usa Cache-Aside sobre Redis y persiste en DynamoDB; Transferencias persiste en Aurora MySQL. Ambos publican al bus de eventos (EventBridge + SQS), que desacopla la escritura hacia Auditoría (DynamoDB + S3 Object Lock) y el despacho de Notificaciones (Pinpoint + SES) de los servicios que originan el evento.
 
-    ContainerDb(cache, "Cache", "Amazon ElastiCache (Redis)", "Cache-Aside de saldos, ultimos movimientos y sesiones de clientes frecuentes")
-    ContainerDb(aurora, "Base Transaccional", "Amazon Aurora MySQL Multi-AZ", "Cuentas, saldos, productos, idempotencia de transferencias")
-    ContainerDb(dynMov, "Movimientos", "Amazon DynamoDB", "Historico de movimientos de alto volumen")
-    ContainerDb(dynAudit, "Auditoria", "DynamoDB + S3 Object Lock (WORM)", "Rastro de auditoria inmutable de toda accion del cliente")
-
-    Container(bus, "Bus de Eventos", "Amazon EventBridge + SQS (DLQ)", "Desacopla productores (transferencias/movimientos) de consumidores (auditoria/notificaciones)")
-  }
-
-  System_Ext(idp, "Auth0 / Okta CIC", "OAuth2/OIDC, MFA adaptativo")
-  System_Ext(kyc, "Onfido / iProov", "Verificacion facial y de documento")
-  System_Ext(rekognition, "AWS Rekognition", "Liveness ligero para revalidaciones")
-  System_Ext(core, "Core Bancario", "Datos basicos, movimientos, productos")
-  System_Ext(crm, "Sistema Complementario de Cliente", "Detalle extendido del cliente")
-  System_Ext(interbank, "Red Interbancaria", "Procesa transferencias externas")
-  System_Ext(pinpoint, "Amazon Pinpoint", "Orquestacion push/SMS")
-  System_Ext(ses, "Amazon SES", "Email transaccional")
-
-  Rel(cliente, spa, "Usa", "HTTPS")
-  Rel(cliente, mobile, "Usa", "HTTPS")
-  Rel(spa, waf, "Peticiones", "HTTPS/TLS 1.2+")
-  Rel(mobile, waf, "Peticiones", "HTTPS/TLS 1.2+")
-  Rel(waf, apigw, "Filtra y reenvia", "HTTPS")
-  Rel(apigw, bffWeb, "Enruta (solo SPA)", "HTTPS + JWT")
-  Rel(apigw, bffMobile, "Enruta (solo movil)", "HTTPS + JWT")
-
-  Rel(bffWeb, svcDatos, "Consulta", "REST/HTTPS interno + mTLS")
-  Rel(bffWeb, svcMov, "Consulta", "REST/HTTPS interno + mTLS")
-  Rel(bffWeb, svcTransf, "Ordena transferencia", "REST/HTTPS interno + mTLS")
-  Rel(bffMobile, svcDatos, "Consulta", "REST/HTTPS interno + mTLS")
-  Rel(bffMobile, svcMov, "Consulta", "REST/HTTPS interno + mTLS")
-  Rel(bffMobile, svcTransf, "Ordena transferencia", "REST/HTTPS interno + mTLS")
-  Rel(bffMobile, kyc, "Envia documento + selfie", "REST/HTTPS")
-  Rel(bffMobile, rekognition, "Revalida liveness ligero", "AWS SDK/HTTPS")
-
-  Rel(svcDatos, core, "Obtiene datos basicos/productos", "REST/HTTPS")
-  Rel(svcDatos, crm, "Obtiene detalle de cliente", "REST/HTTPS")
-  Rel(svcMov, dynMov, "Lee/escribe", "AWS SDK")
-  Rel(svcMov, cache, "Cache-Aside", "Redis Protocol")
-  Rel(svcTransf, aurora, "Debita/acredita (ACID)", "SQL/TLS")
-  Rel(svcTransf, interbank, "Ejecuta transferencia externa", "REST/HTTPS + mTLS")
-  Rel(svcTransf, bus, "Publica TransferCompleted", "EventBridge")
-  Rel(svcMov, bus, "Publica MovementRegistered", "EventBridge")
-  Rel(bus, svcAudit, "Entrega evento", "SQS")
-  Rel(bus, svcNotif, "Entrega evento", "SQS")
-  Rel(svcAudit, dynAudit, "Persiste rastro inmutable", "AWS SDK")
-  Rel(svcNotif, pinpoint, "Envia push/SMS", "AWS SDK")
-  Rel(svcNotif, ses, "Envia email", "AWS SDK")
-
-  Rel(apigw, idp, "Valida JWT via JWKS", "OIDC")
-```
+![Diagrama de Contenedores 3/3 - Persistencia y Mensajería](../diagrams/png/02c-contenedores-datos-mensajeria.png)
 
 ---
 
@@ -273,100 +193,25 @@ C4Container
 
 **Audiencia:** técnica (desarrollo de detalle).
 
-Se detallan los dos contenedores de mayor complejidad interna: el **Servicio de Transferencias** (por concentrar el patrón Saga, idempotencia y Circuit Breaker) y el conjunto **Auditoría + Notificaciones** (por concentrar el pipeline de eventos y el requisito de inmutabilidad regulatoria).
+Se detallan los dos contenedores de mayor complejidad interna: el **Servicio de Transferencias** (por concentrar el patrón Saga, idempotencia y Circuit Breaker — dividido en 2 vistas por su tamaño) y el conjunto **Auditoría + Notificaciones** (por concentrar el pipeline de eventos y el requisito de inmutabilidad regulatoria).
 
-### 6.1 Componentes — Servicio de Transferencias
+### 6.1 Componentes — Transferencias: Recepción y Control de Acceso (1/2)
 
-**Lectura del diagrama:** cada request pasa primero por el middleware de autenticación (valida el JWT contra Auth0) y luego por el middleware de idempotencia (evita procesar dos veces la misma transferencia si el cliente reintenta por timeout). El orquestador aplica el patrón Saga: debita en Aurora, intenta la transferencia externa a través de un cliente con Circuit Breaker, y si falla, ejecuta una acción de compensación que revierte el débito. Al finalizar, publica un evento de dominio en EventBridge.
+**Lectura del diagrama:** cada request pasa primero por el middleware de autenticación (valida el JWT contra Auth0) y luego por el middleware de idempotencia (evita procesar dos veces la misma transferencia si el cliente reintenta por timeout) antes de entrar al orquestador.
 
-```mermaid
-C4Component
-  title Diagrama de Componentes - Servicio de Transferencias (C4 Nivel 3)
+![Diagrama de Componentes 1/2 - Transferencias: Recepción y Control de Acceso](../diagrams/png/03a-componentes-transferencias-recepcion.png)
 
-  Container_Boundary(svcTransf, "Servicio Transferencias (Laravel Octane / ECS Fargate)") {
+### 6.2 Componentes — Transferencias: Orquestación, Resiliencia y Persistencia (2/2)
 
-    Component(controller, "Transfer Controller", "Laravel Controller", "Expone POST /transfers, valida el payload de entrada")
-    Component(authMw, "Auth Middleware", "auth0/laravel-auth0", "Valida el JWT (firma, exp, aud) contra el JWKS de Auth0")
-    Component(idemMw, "Idempotency Middleware", "Laravel Middleware + Redis", "Verifica Idempotency-Key; si ya se proceso, retorna la respuesta cacheada en vez de repetir el debito")
-    Component(orchestrator, "Transfer Orchestrator", "Application Service (patron Saga)", "Coordina el paso a paso: validar saldo, debitar, ejecutar transferencia externa, confirmar o compensar")
-    Component(ledgerRepo, "Ledger Repository", "Eloquent ORM", "Debita/acredita cuentas de forma transaccional (BEGIN/COMMIT) en Aurora MySQL")
-    Component(cbClient, "Interbank Circuit Breaker Client", "Guzzle + libreria resiliente (retry, backoff exponencial+jitter, circuit breaker, bulkhead)", "Encapsula la llamada externa; abre el circuito si la red interbancaria degrada")
-    Component(interbankConnector, "Interbank Connector", "HTTP Client mTLS", "Traduce el dominio interno al contrato del banco/red destino")
-    Component(compensator, "Compensating Action Handler", "Application Service", "Revierte el debito si la transferencia externa falla (paso de compensacion del Saga)")
-    Component(eventPublisher, "Domain Event Publisher", "AWS SDK for PHP", "Publica TransferCompleted / TransferFailed en EventBridge")
+**Lectura del diagrama:** el orquestador aplica el patrón Saga: debita en Aurora, intenta la transferencia externa a través de un cliente con Circuit Breaker, y si falla, ejecuta una acción de compensación que revierte el débito. Al finalizar (con éxito o falla), publica un evento de dominio en EventBridge.
 
-    ComponentDb(auroraDb, "Aurora MySQL", "Amazon Aurora MySQL Multi-AZ", "Cuentas y saldos")
-    ComponentDb(redisDb, "Redis", "Amazon ElastiCache", "Registro de Idempotency-Keys con TTL")
-  }
+![Diagrama de Componentes 2/2 - Transferencias: Orquestación, Resiliencia y Persistencia](../diagrams/png/03b-componentes-transferencias-orquestacion.png)
 
-  System_Ext(idp, "Auth0", "Emisor del JWT / JWKS")
-  System_Ext(interbank, "Red Interbancaria", "Banco destino")
-  Container(bus, "EventBridge", "Bus de eventos", "Notifica a Auditoria y Notificaciones")
-
-  Rel(controller, authMw, "Pasa por", "in-process")
-  Rel(authMw, idp, "Valida firma", "JWKS/HTTPS")
-  Rel(authMw, idemMw, "Pasa por", "in-process")
-  Rel(idemMw, redisDb, "Lee/escribe clave", "Redis Protocol")
-  Rel(idemMw, orchestrator, "Invoca", "in-process")
-  Rel(orchestrator, ledgerRepo, "Debita cuenta origen", "Eloquent/SQL")
-  Rel(ledgerRepo, auroraDb, "Transaccion ACID", "SQL/TLS")
-  Rel(orchestrator, cbClient, "Ejecuta transferencia externa", "in-process")
-  Rel(cbClient, interbankConnector, "Delega si el circuito esta cerrado", "in-process")
-  Rel(interbankConnector, interbank, "POST /transfer", "REST/HTTPS + mTLS")
-  Rel(cbClient, compensator, "Si falla o el circuito esta abierto", "in-process")
-  Rel(compensator, ledgerRepo, "Revierte el debito", "Eloquent/SQL")
-  Rel(orchestrator, eventPublisher, "Publica resultado", "in-process")
-  Rel(eventPublisher, bus, "TransferCompleted / TransferFailed", "EventBridge PutEvents")
-```
-
-### 6.2 Componentes — Auditoría y Notificaciones
+### 6.3 Componentes — Auditoría y Notificaciones
 
 **Lectura del diagrama:** ambos servicios son consumidores independientes del mismo bus de eventos (patrón Pub/Sub con Competing Consumers). Auditoría escribe primero en DynamoDB para consulta rápida y luego archiva el mismo evento en S3 con Object Lock para retención inmutable de largo plazo. Notificaciones decide el canal según el tipo de evento y la preferencia del cliente, y registra el resultado de la entrega como evidencia para cumplimiento normativo.
 
-```mermaid
-C4Component
-  title Diagrama de Componentes - Auditoria y Notificaciones (C4 Nivel 3)
-
-  Container(bus, "EventBridge + SQS (DLQ)", "Bus de eventos", "Entrega MovementRegistered, TransferCompleted, LoginSucceeded, etc.")
-
-  Container_Boundary(svcAudit, "Servicio Auditoria (Laravel Horizon Worker / ECS Fargate)") {
-    Component(auditConsumer, "Audit Event Consumer", "Laravel Queue Job", "Consume mensajes de SQS, deserializa el evento de dominio")
-    Component(auditWriter, "Audit Writer", "Repository (AWS SDK for PHP)", "Escribe el registro de auditoria con actor, accion, timestamp y hash")
-    Component(wormArchiver, "WORM Archiver", "Kinesis Firehose Consumer", "Envia el stream de DynamoDB hacia S3 con Object Lock (Compliance mode)")
-    ComponentDb(dynAudit, "DynamoDB Auditoria", "Amazon DynamoDB", "Consulta rapida de auditoria reciente")
-    ComponentDb(s3Worm, "S3 Object Lock", "Amazon S3 (WORM)", "Retencion inmutable de largo plazo")
-  }
-
-  Container_Boundary(svcNotif, "Servicio Notificaciones (Laravel Horizon Worker / ECS Fargate)") {
-    Component(notifConsumer, "Notification Event Consumer", "Laravel Queue Job", "Consume el evento y decide que notificar")
-    Component(channelRouter, "Channel Router", "Application Service", "Selecciona canal(es): push, SMS o email segun preferencia y criticidad")
-    Component(templateEngine, "Template Engine", "Laravel Blade / Markdown Mail", "Genera el contenido segun tipo de evento e idioma del cliente")
-    Component(pinpointAdapter, "Pinpoint Adapter", "AWS SDK for PHP", "Envia push (FCM/APNs) y SMS via Amazon Pinpoint")
-    Component(sesAdapter, "SES Adapter", "AWS SDK for PHP", "Envia email transaccional via Amazon SES")
-    Component(deliveryTracker, "Delivery Tracker", "Repository", "Registra el estado de entrega para evidencia regulatoria")
-  }
-
-  System_Ext(fcmApns, "FCM / APNs", "Push nativo")
-  System_Ext(pinpoint, "Amazon Pinpoint", "Orquestacion multicanal")
-  System_Ext(ses, "Amazon SES", "Email transaccional")
-
-  Rel(bus, auditConsumer, "Entrega evento", "SQS")
-  Rel(auditConsumer, auditWriter, "Invoca", "in-process")
-  Rel(auditWriter, dynAudit, "PutItem", "AWS SDK")
-  Rel(dynAudit, wormArchiver, "DynamoDB Streams", "Kinesis Firehose")
-  Rel(wormArchiver, s3Worm, "Escribe objeto inmutable", "AWS SDK / TLS")
-
-  Rel(bus, notifConsumer, "Entrega evento", "SQS")
-  Rel(notifConsumer, channelRouter, "Invoca", "in-process")
-  Rel(channelRouter, templateEngine, "Genera contenido", "in-process")
-  Rel(channelRouter, pinpointAdapter, "Push/SMS", "in-process")
-  Rel(channelRouter, sesAdapter, "Email", "in-process")
-  Rel(pinpointAdapter, pinpoint, "SendMessages", "AWS SDK/HTTPS")
-  Rel(pinpoint, fcmApns, "Entrega push nativo", "HTTPS")
-  Rel(sesAdapter, ses, "SendEmail", "AWS SDK/HTTPS")
-  Rel(pinpointAdapter, deliveryTracker, "Registra resultado", "in-process")
-  Rel(sesAdapter, deliveryTracker, "Registra resultado", "in-process")
-```
+![Diagrama de Componentes - Auditoría y Notificaciones](../diagrams/png/04-componentes-auditoria-notificaciones.png)
 
 ---
 
@@ -376,80 +221,7 @@ C4Component
 
 **Lectura del diagrama:** el tráfico del cliente entra por Route 53 y CloudFront/WAF, llega a API Gateway y de ahí a una VPC privada con dos zonas de disponibilidad (AZ-A y AZ-B), cada una con su propio clúster de tareas ECS Fargate y su réplica de Aurora/Redis. Los servicios administrados regionales (EventBridge/SQS, DynamoDB, S3, Pinpoint/SES) son nativamente Multi-AZ y no requieren gestión de zonas por parte del equipo. Una región secundaria pasiva (DR) mantiene réplicas continuas de Aurora (Global Database), DynamoDB (Global Tables) y S3 (Cross-Region Replication), lista para recibir tráfico si Route 53 detecta la caída de la región primaria.
 
-```mermaid
-C4Deployment
-  title Diagrama de Despliegue - Infraestructura AWS (BP Banca Digital)
-
-  Deployment_Node(cliente, "Dispositivo del cliente", "Navegador / iOS / Android"){
-    Container(spa, "SPA", "React + TypeScript")
-    Container(mobile, "App movil", "React Native + TypeScript")
-  }
-
-  Deployment_Node(aws, "AWS", "Cuenta AWS de BP"){
-
-    Deployment_Node(edge, "Edge Global", "CloudFront + Route 53"){
-      Container(waf, "WAF + CloudFront", "Proteccion perimetral y TLS")
-      Container(r53, "Route 53", "DNS y failover multi-region")
-    }
-
-    Deployment_Node(regionPrimary, "Region Primaria (ej. us-east-1)", "AWS Region - Activa"){
-
-      Container(apigw, "API Gateway", "Autorizacion JWT, throttling")
-
-      Deployment_Node(vpc, "VPC Privada", "10.0.0.0/16"){
-        Deployment_Node(azA, "Zona de Disponibilidad A", "Subred privada"){
-          Deployment_Node(ecsA, "ECS Fargate - Tareas AZ-A", "Cluster"){
-            Container(bffA, "BFF Web / Movil", "Laravel Octane")
-            Container(svcA, "Servicios de negocio", "Datos, Movimientos, Transferencias")
-            Container(workerA, "Workers", "Laravel Horizon")
-          }
-          ContainerDb(auroraWriter, "Aurora MySQL Writer", "Amazon Aurora Multi-AZ")
-          ContainerDb(redisPrimary, "Redis Primary", "Amazon ElastiCache")
-        }
-        Deployment_Node(azB, "Zona de Disponibilidad B", "Subred privada"){
-          Deployment_Node(ecsB, "ECS Fargate - Tareas AZ-B", "Cluster"){
-            Container(bffB, "BFF Web / Movil", "Laravel Octane")
-            Container(svcB, "Servicios de negocio", "Datos, Movimientos, Transferencias")
-            Container(workerB, "Workers", "Laravel Horizon")
-          }
-          ContainerDb(auroraReader, "Aurora MySQL Reader", "Replica sincronica")
-          ContainerDb(redisReplica, "Redis Replica", "Failover automatico")
-        }
-      }
-
-      Deployment_Node(regionalSvcs, "Servicios administrados regionales", "Multi-AZ nativo"){
-        Container(bus, "EventBridge + SQS", "Bus de eventos con DLQ")
-        ContainerDb(dynMov, "DynamoDB Movimientos", "On-demand capacity")
-        ContainerDb(dynAudit, "DynamoDB Auditoria", "Streams habilitado")
-        ContainerDb(s3worm, "S3 Object Lock", "WORM - retencion regulatoria")
-        Container(pinpointSes, "Pinpoint + SES", "Notificaciones multicanal")
-      }
-    }
-
-    Deployment_Node(regionDR, "Region DR (ej. us-west-2)", "AWS Region - Pasiva"){
-      ContainerDb(auroraDR, "Aurora MySQL Global DB", "Replica de solo lectura, promovible")
-      ContainerDb(dynDR, "DynamoDB Global Tables", "Replica multi-region")
-      ContainerDb(s3DR, "S3 Cross-Region Replication", "Copia de objetos WORM")
-    }
-  }
-
-  Rel(spa, waf, "HTTPS/TLS 1.2+")
-  Rel(mobile, waf, "HTTPS/TLS 1.2+")
-  Rel(waf, apigw, "HTTPS")
-  Rel(r53, edge, "Resuelve y enruta")
-  Rel(r53, regionDR, "Failover si la region primaria falla")
-  Rel(apigw, ecsA, "HTTPS interno + mTLS")
-  Rel(apigw, ecsB, "HTTPS interno + mTLS")
-  Rel(ecsA, auroraWriter, "SQL/TLS")
-  Rel(ecsB, auroraWriter, "SQL/TLS")
-  Rel(auroraWriter, auroraReader, "Replicacion sincronica Multi-AZ")
-  Rel(auroraWriter, auroraDR, "Replicacion Global Database (RPO ~1s)")
-  Rel(dynMov, dynDR, "Global Tables")
-  Rel(dynAudit, dynDR, "Global Tables")
-  Rel(s3worm, s3DR, "Cross-Region Replication")
-  Rel(ecsA, bus, "Publica/consume eventos")
-  Rel(ecsB, bus, "Publica/consume eventos")
-```
+![Diagrama de Despliegue - Infraestructura AWS](../diagrams/png/05-despliegue.png)
 
 ---
 
@@ -461,123 +233,13 @@ Los diagramas dinámicos del modelo C4 muestran, para un escenario de ejecución
 
 **Lectura del diagrama:** ilustra en secuencia el patrón Idempotency Key (evita doble cobro ante reintentos), el patrón Saga con su paso de compensación (si el banco destino falla, se revierte el débito) y el patrón Pub/Sub posterior (Auditoría y Notificaciones se enteran del resultado sin que el Servicio de Transferencias sepa que existen).
 
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Cliente
-  participant App as SPA / App Movil
-  participant GW as API Gateway
-  participant IdP as Auth0 (JWKS)
-  participant BFF as BFF
-  participant TS as Servicio Transferencias
-  participant Redis as Redis (Idempotencia)
-  participant DB as Aurora MySQL
-  participant CB as Cliente Circuit Breaker
-  participant Interbank as Red Interbancaria
-  participant Bus as EventBridge/SQS
-  participant Audit as Servicio Auditoria
-  participant Notif as Servicio Notificaciones
-
-  Cliente->>App: Confirma transferencia (monto, cuenta destino)
-  App->>GW: POST /transfers (JWT + Idempotency-Key)
-  GW->>IdP: Valida firma del JWT (JWKS)
-  IdP-->>GW: Token valido
-  GW->>BFF: Reenvia solicitud
-  BFF->>TS: POST /transfers
-  TS->>Redis: Verifica Idempotency-Key
-
-  alt Transferencia ya procesada
-    Redis-->>TS: Respuesta previa cacheada
-    TS-->>BFF: 200 OK (resultado idempotente)
-  else Transferencia nueva
-    TS->>DB: BEGIN TX - Debita cuenta origen
-    DB-->>TS: OK
-    TS->>CB: Ejecuta transferencia externa
-    alt Circuito cerrado y banco destino responde
-      CB->>Interbank: POST /transfer (mTLS)
-      Interbank-->>CB: Confirmacion
-      CB-->>TS: OK
-      TS->>DB: COMMIT
-      TS->>Bus: Publica TransferCompleted
-    else Circuito abierto o el banco destino falla
-      CB-->>TS: Error / timeout
-      TS->>DB: Accion de compensacion (revierte debito)
-      TS->>Bus: Publica TransferFailed
-    end
-    TS->>Redis: Guarda resultado con la Idempotency-Key (TTL)
-    TS-->>BFF: Resultado de la operacion
-  end
-
-  BFF-->>App: Resultado
-  App-->>Cliente: Muestra confirmacion o error
-
-  Bus->>Audit: Entrega evento (SQS)
-  Bus->>Notif: Entrega evento (SQS)
-  Audit->>Audit: Persiste rastro inmutable (DynamoDB + S3 Object Lock)
-  Notif->>Cliente: Notificacion push/email del movimiento
-```
+![Diagrama de Secuencia - Flujo de Transferencia Interbancaria](../diagrams/png/06-secuencia-transferencia.png)
 
 ### 8.2 Flujo de onboarding biométrico y autenticación
 
 **Lectura del diagrama:** el primer bloque cubre el alta del cliente (documento + selfie con prueba de vida verificados por el proveedor KYC, creación de la identidad en Auth0 y registro de la credencial de acceso). El segundo bloque cubre el inicio de sesión recurrente ya con Authorization Code + PKCE y biometría nativa del dispositivo, sin volver a pasar por el proveedor KYC.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Cliente
-  participant App as App Movil
-  participant BFF as BFF Movil
-  participant KYC as Onfido / iProov
-  participant Rekog as AWS Rekognition
-  participant Core as Core Bancario
-  participant IdP as Auth0
-  participant Bus as EventBridge/SQS
-  participant Audit as Servicio Auditoria
-
-  rect rgb(235,245,255)
-  note over Cliente,IdP: Onboarding (una sola vez)
-  Cliente->>App: Inicia registro como nuevo cliente
-  App->>App: Captura documento de identidad + selfie con prueba de vida
-  App->>BFF: Envia documento + selfie (HTTPS)
-  BFF->>KYC: Verifica documento, selfie y liveness certificada
-  KYC-->>BFF: Resultado (aprobado/rechazado + score)
-
-  alt Verificacion aprobada
-    BFF->>Core: Valida existencia de cliente / productos
-    Core-->>BFF: Cliente validado
-    BFF->>IdP: Crea identidad de usuario (Management API)
-    IdP-->>BFF: Usuario creado
-    BFF->>App: Solicita registrar credencial de acceso
-    App->>IdP: Registra usuario/clave y/o WebAuthn (huella, Face ID)
-    IdP-->>App: Credencial registrada
-    BFF->>Bus: Publica OnboardingCompleted
-    App-->>Cliente: Onboarding exitoso
-  else Verificacion rechazada
-    BFF->>Bus: Publica OnboardingRejected
-    BFF-->>App: Rechazo + motivo
-    App-->>Cliente: No fue posible verificar la identidad
-  end
-  Bus->>Audit: Registra evento de onboarding
-  end
-
-  rect rgb(240,255,240)
-  note over Cliente,IdP: Inicio de sesion recurrente
-  Cliente->>App: Abre la app para iniciar sesion
-  App->>IdP: Authorization Code + PKCE (usuario/clave, huella o WebAuthn)
-  IdP->>App: Solicita segundo factor si aplica (MFA adaptativo)
-  Cliente->>App: Autoriza con biometria nativa (Secure Enclave/StrongBox)
-  IdP-->>App: Redirige con authorization code
-  App->>IdP: Intercambia code + code_verifier por tokens
-  IdP-->>App: access_token (JWT) + refresh_token
-  App->>Bus: (via BFF) Publica LoginSucceeded
-  Bus->>Audit: Registra evento de inicio de sesion
-  end
-
-  opt Revalidacion de riesgo en operaciones sensibles
-    App->>Rekog: Revalida liveness ligero (step-up)
-    Rekog-->>App: Resultado de verificacion
-  end
-```
+![Diagrama de Secuencia - Onboarding Biométrico y Autenticación](../diagrams/png/07-secuencia-onboarding.png)
 
 ---
 

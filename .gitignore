@@ -15,6 +15,7 @@ npm-debug.log*
 *.pdf
 *.png
 *.svg
+!docs/*.pdf
 !diagrams/**/*.png
 !diagrams/**/*.svg
 

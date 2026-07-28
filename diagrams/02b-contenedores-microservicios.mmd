@@ -1,0 +1,31 @@
+C4Container
+  title Diagrama de Contenedores (2/3) - Microservicios de Negocio
+
+  System_Boundary(bp, "Sistema de Banca Digital BP") {
+    Container(bffWeb, "BFF Web", "Laravel Octane en ECS Fargate", "Agrega y adapta datos para la SPA")
+    Container(bffMobile, "BFF Movil", "Laravel Octane en ECS Fargate", "Agrega datos y orquesta el onboarding KYC")
+    Container(svcDatos, "Servicio Datos Basicos", "Laravel Octane en ECS Fargate", "Compone datos del Core + sistema complementario")
+    Container(svcMov, "Servicio Movimientos", "Laravel Octane en ECS Fargate", "Historico de movimientos, Cache-Aside")
+    Container(svcTransf, "Servicio Transferencias", "Laravel Octane en ECS Fargate", "Saga + Circuit Breaker")
+    Container(bus, "Bus de Eventos", "Amazon EventBridge + SQS", "Ver detalle en vista 3/3")
+  }
+
+  System_Ext(core, "Core Bancario", "Datos basicos, movimientos, productos")
+  System_Ext(crm, "Sistema Complementario de Cliente", "Detalle extendido del cliente")
+  System_Ext(kyc, "Onfido / iProov", "Verificacion facial y de documento")
+  System_Ext(rekognition, "AWS Rekognition", "Liveness ligero para revalidaciones")
+  System_Ext(interbank, "Red Interbancaria", "Procesa transferencias externas")
+
+  Rel(bffWeb, svcDatos, "Consulta", "REST/HTTPS + mTLS")
+  Rel(bffWeb, svcMov, "Consulta", "REST/HTTPS + mTLS")
+  Rel(bffWeb, svcTransf, "Ordena transferencia", "REST/HTTPS + mTLS")
+  Rel(bffMobile, svcDatos, "Consulta", "REST/HTTPS + mTLS")
+  Rel(bffMobile, svcMov, "Consulta", "REST/HTTPS + mTLS")
+  Rel(bffMobile, svcTransf, "Ordena transferencia", "REST/HTTPS + mTLS")
+  Rel(bffMobile, kyc, "Envia documento + selfie", "REST/HTTPS")
+  Rel(bffMobile, rekognition, "Revalida liveness ligero", "AWS SDK")
+  Rel(svcDatos, core, "Obtiene datos basicos/productos", "REST/HTTPS")
+  Rel(svcDatos, crm, "Obtiene detalle de cliente", "REST/HTTPS")
+  Rel(svcTransf, interbank, "Ejecuta transferencia externa", "REST/HTTPS + mTLS")
+  Rel(svcMov, bus, "Publica MovementRegistered", "EventBridge")
+  Rel(svcTransf, bus, "Publica TransferCompleted", "EventBridge")

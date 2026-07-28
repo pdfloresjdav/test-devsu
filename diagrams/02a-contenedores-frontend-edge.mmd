@@ -1,0 +1,24 @@
+C4Container
+  title Diagrama de Contenedores (1/3) - Frontend, Edge y Autenticacion
+
+  Person(cliente, "Cliente de BP", "Usuario final")
+
+  System_Boundary(bp, "Sistema de Banca Digital BP") {
+    Container(spa, "SPA Web", "React + TypeScript", "Portal transaccional de escritorio")
+    Container(mobile, "App Movil", "React Native + TypeScript", "Onboarding biometrico, login, movimientos y transferencias")
+    Container(waf, "Edge / WAF", "AWS WAF + CloudFront", "Proteccion perimetral, TLS, mitigacion DDoS")
+    Container(apigw, "API Gateway", "Amazon API Gateway", "Enrutamiento, throttling, autorizacion JWT")
+    Container(bffWeb, "BFF Web", "Laravel Octane en ECS Fargate", "Ver detalle en vista 2/3")
+    Container(bffMobile, "BFF Movil", "Laravel Octane en ECS Fargate", "Ver detalle en vista 2/3")
+  }
+
+  System_Ext(idp, "Auth0 / Okta CIC", "OAuth2/OIDC, MFA adaptativo, passkeys")
+
+  Rel(cliente, spa, "Usa", "HTTPS")
+  Rel(cliente, mobile, "Usa", "HTTPS")
+  Rel(spa, waf, "Peticiones", "HTTPS/TLS 1.2+")
+  Rel(mobile, waf, "Peticiones", "HTTPS/TLS 1.2+")
+  Rel(waf, apigw, "Filtra y reenvia", "HTTPS")
+  Rel(apigw, bffWeb, "Enruta (solo SPA)", "HTTPS + JWT")
+  Rel(apigw, bffMobile, "Enruta (solo movil)", "HTTPS + JWT")
+  Rel(apigw, idp, "Valida JWT via JWKS", "OIDC")

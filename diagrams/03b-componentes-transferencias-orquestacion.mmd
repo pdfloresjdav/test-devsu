@@ -1,0 +1,25 @@
+C4Component
+  title Diagrama de Componentes (2/2) - Transferencias: Orquestacion, Resiliencia y Persistencia
+
+  System_Ext(interbank, "Red Interbancaria", "Banco destino")
+  Container(bus, "EventBridge", "Bus de eventos", "Notifica a Auditoria y Notificaciones")
+
+  Container_Boundary(svcTransf, "Servicio Transferencias (Laravel Octane / ECS Fargate)") {
+    Component(orchestrator, "Transfer Orchestrator", "Application Service (patron Saga)", "Coordina debitar, transferir y confirmar o compensar")
+    Component(cbClient, "Interbank Circuit Breaker Client", "Guzzle + resiliencia", "Retry, backoff, circuit breaker, bulkhead")
+    Component(interbankConnector, "Interbank Connector", "HTTP Client mTLS", "Traduce al contrato del banco destino")
+    Component(compensator, "Compensating Action Handler", "Application Service", "Revierte el debito si la transferencia falla")
+    Component(ledgerRepo, "Ledger Repository", "Eloquent ORM", "Debita/acredita cuentas (BEGIN/COMMIT)")
+    ComponentDb(auroraDb, "Aurora MySQL", "Amazon Aurora Multi-AZ", "Cuentas y saldos")
+    Component(eventPublisher, "Domain Event Publisher", "AWS SDK for PHP", "Publica TransferCompleted / TransferFailed")
+  }
+
+  Rel(orchestrator, ledgerRepo, "Debita cuenta origen", "Eloquent/SQL")
+  Rel(ledgerRepo, auroraDb, "Transaccion ACID", "SQL/TLS")
+  Rel(orchestrator, cbClient, "Ejecuta transferencia externa", "in-process")
+  Rel(cbClient, interbankConnector, "Delega si el circuito esta cerrado", "in-process")
+  Rel(interbankConnector, interbank, "POST /transfer", "REST/HTTPS + mTLS")
+  Rel(cbClient, compensator, "Si falla o circuito abierto", "in-process")
+  Rel(compensator, ledgerRepo, "Revierte el debito", "Eloquent/SQL")
+  Rel(orchestrator, eventPublisher, "Publica resultado", "in-process")
+  Rel(eventPublisher, bus, "TransferCompleted / TransferFailed", "PutEvents")
