@@ -213,3 +213,20 @@ Bitácora cronológica del desarrollo. Cada entrada corresponde a uno o más ít
   2. Se agregó el ítem 6.9 (provisión de infraestructura), no previsto en el plan original pero indispensable.
   3. El driver `aws` (Pinpoint/SES reales) se implementó pero **no se probó** contra LocalStack — Pinpoint es una funcionalidad de pago (Pro) de LocalStack. Queda como código listo para producción pero solo verificado manualmente por lectura, no por test automatizado; algo a tener en cuenta al conectar AWS real (Fase 13).
 - **Bloqueos / pendientes para retomar:** Fase 6 completa — con esto quedan cerrados los 5 microservicios de negocio/workers previstos (Datos Básicos, Movimientos, Transferencias, Auditoría, Notificaciones). Siguiente paso: Fase 7 (`services/bff-web`).
+
+## 2026-07-28 (continuación — Fase 7: `services/bff-web`)
+
+- **Ítem(s) del checklist:** 7.1 a 7.6
+- **Qué se hizo:**
+  - Scaffold de `services/bff-web` con Octane/Swoole (es un servicio HTTP normal, como Datos Básicos/Movimientos/Transferencias — a diferencia de Auditoría/Notificaciones que son workers puros).
+  - `App\Contracts\{DatosBasicosClient,MovimientosClient,TransferenciasClient}` + implementaciones `Http*` sobre una base común `HttpUpstreamClient` que traduce cualquier falla HTTP del servicio interno a `UpstreamServiceException` preservando el status code real (404, 422, etc.) en vez de aplanar todo a un 502.
+  - Los 3 clientes **propagan el mismo JWT del cliente** hacia el servicio interno (nunca credenciales de servicio a servicio aparte) — se agregó `BP\Common\Auth\JwtClaims::bearerToken(Request $request)` a `bp-common` (retroactivo) para extraer el token crudo del header `Authorization`, reutilizable también por el BFF Móvil en la Fase 8.
+  - `App\Services\DashboardService`: el único punto que agrega de verdad (Datos Básicos + Movimientos en un contrato). `GET /cuentas/{id}/movimientos` y `POST /transferencias` son pass-through adaptado (mismo envelope de respuesta, mismo manejo de errores) hacia Movimientos y Transferencias respectivamente.
+  - 9 tests usando `GuzzleHttp\Handler\MockHandler` para simular los 3 servicios de negocio (el criterio de aceptación de la fase permite explícitamente probar "contra los servicios o sus fakes"; levantar 3 servidores reales en cada corrida de tests habría sido mucho más lento y frágil). Los tests verifican tanto el contrato de salida como que el JWT/Idempotency-Key realmente se reenvían al servicio interno (inspeccionando el `HandlerStack` con `Middleware::history`).
+- **Cómo se verificó:**
+  - `php artisan test` → 9 passed, 20 assertions.
+  - **Verificación manual real** (más allá de los mocks): se levantaron los 4 procesos reales a la vez (`svc-datos-basicos:8001`, `svc-movimientos:8002`, `svc-transferencias:8003`, `bff-web:8010`) y se confirmó `/health` de cada uno y el rechazo 401 del BFF sin token — prueba que el cableado entre procesos reales (puertos, `config/services.php`) es correcto, más allá de lo que cubren los tests con mocks.
+  - Build real de la imagen Docker + `docker run` en la red de `docker-compose`, mismos chequeos.
+- **Desviaciones respecto a la arquitectura o al checklist:** ninguna relevante. Se agregó `JwtClaims::bearerToken()` a `bp-common` (extensión menor, no una desviación).
+- **Nota para la Fase 8:** al armar el BFF Móvil, un error de shell propio (el `cd` de un comando encadenado con `&&... &` persistió entre llamadas de la herramienta Bash y el siguiente `php artisan serve` arrancó en el directorio equivocado) hizo que un servicio respondiera con el `/health` de otro. Quedó detectado y corregido en el momento porque cada `/health` imprime su propio nombre de servicio — buen recordatorio de verificar SIEMPRE el contenido del `/health`, no solo el código de estado, al levantar varios servicios a la vez con `cd && comando &` encadenados.
+- **Bloqueos / pendientes para retomar:** Fase 7 completa. Siguiente paso: Fase 8 (`services/bff-mobile`, incluye la orquestación de onboarding KYC).

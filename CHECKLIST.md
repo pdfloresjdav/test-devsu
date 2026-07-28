@@ -130,12 +130,12 @@
 
 **Criterio de aceptación:** agrega datos de los 3 servicios de negocio en contratos pensados para la SPA, con tests de integración contra los servicios (o sus fakes).
 
-- [ ] 7.1 Scaffold Laravel + Octane + Dockerfile
-- [ ] 7.2 Clientes HTTP hacia Datos Básicos, Movimientos y Transferencias
-- [ ] 7.3 Endpoints agregados para la SPA
-- [ ] 7.4 Middleware de auth (`bp-common`)
-- [ ] 7.5 Tests
-- [ ] 7.6 `.env.example`
+- [x] 7.1 Scaffold Laravel + Octane + Dockerfile
+- [x] 7.2 Clientes HTTP hacia Datos Básicos, Movimientos y Transferencias (`DatosBasicosClient`/`MovimientosClient`/`TransferenciasClient`, cada uno propaga el mismo JWT del cliente hacia el servicio interno — decisión 3.5: cada servicio valida su propio token, sin credenciales de servicio a servicio aparte)
+- [x] 7.3 Endpoints agregados para la SPA: `GET /dashboard/{cuentaId}` (compone Datos Básicos + Movimientos en un solo contrato — el único endpoint que agrega de verdad), `GET /cuentas/{id}/movimientos` y `POST /transferencias` (pass-through adaptado, con envelope y manejo de errores consistentes)
+- [x] 7.4 Middleware de auth (`bp-common`) en las 3 rutas
+- [x] 7.5 Tests (9, con `GuzzleHttp\Handler\MockHandler` simulando los 3 servicios — opción explícitamente permitida por el criterio de aceptación de la fase — más una verificación manual real levantando los 4 procesos juntos)
+- [x] 7.6 `.env.example`
 
 ---
 

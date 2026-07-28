@@ -43,6 +43,7 @@ Antes de tocar código en una sesión nueva: leer `CHECKLIST.md` (qué sigue) y 
 **Entorno local (Docker):**
 - El entorno de infraestructura se maneja con `make up` / `make down` / `make logs` / `make ps` (nunca `docker compose` directo salvo para depurar), para que el flujo sea el mismo sin importar cuántos servicios se agreguen.
 - Si una imagen Docker de terceros crashea en bucle en esta máquina (Apple Silicon) con errores que huelen a incompatibilidad nativa (p. ej. `FileLoadException` de .NET, "exec format error"), probar primero fijando `platform: linux/amd64` en el servicio antes de buscar otra imagen — resolvió el caso de `oidc-server-mock`.
+- Al levantar varios servicios a la vez con comandos encadenados (`cd servicio-a && php artisan serve ... &` seguido de otro `cd servicio-b && ...`), el directorio de trabajo del shell persiste entre llamadas de la herramienta Bash **aunque el comando se haya lanzado en segundo plano** — si el siguiente comando no vuelve a hacer `cd` explícito a su propio servicio, arranca en el directorio equivocado. Se detectó en la Fase 7 porque cada `/health` imprime el nombre de su propio servicio: verificar siempre el *contenido* de `/health` al levantar varios procesos juntos, no solo el código de estado 200.
 
 **Frontend (React + TypeScript / React Native + TypeScript):**
 - ESLint + Prettier obligatorios, sin warnings al cerrar un ítem.

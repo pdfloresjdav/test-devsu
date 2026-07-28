@@ -22,4 +22,19 @@ class JwtClaimsTest extends TestCase
 
         $this->assertSame('system', JwtClaims::actor($request));
     }
+
+    public function test_bearer_token_extrae_el_token_del_header_authorization(): void
+    {
+        $request = Request::create('/');
+        $request->headers->set('Authorization', 'Bearer abc.def.ghi');
+
+        $this->assertSame('abc.def.ghi', JwtClaims::bearerToken($request));
+    }
+
+    public function test_bearer_token_devuelve_null_si_no_hay_header(): void
+    {
+        $request = Request::create('/');
+
+        $this->assertNull(JwtClaims::bearerToken($request));
+    }
 }

@@ -25,4 +25,17 @@ class JwtClaims
     {
         return self::from($request)['sub'] ?? $default;
     }
+
+    /**
+     * El token crudo (no decodificado), para reenviarlo tal cual hacia un
+     * microservicio interno -- los BFFs no re-emiten credenciales propias,
+     * propagan el mismo JWT que ya valido JwtAuthMiddleware (decision 3.5:
+     * cada servicio es su propio Resource Server).
+     */
+    public static function bearerToken(Request $request): ?string
+    {
+        $header = $request->header('Authorization', '');
+
+        return str_starts_with($header, 'Bearer ') ? substr($header, 7) : null;
+    }
 }

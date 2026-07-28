@@ -212,7 +212,29 @@ Correr sus tests: `php artisan test` (13 tests, incluyendo un end-to-end real co
 
 Construir su imagen: `docker build -f services/svc-notificaciones/Dockerfile -t bp/svc-notificaciones .` desde la raíz del repo (worker puro, sin Swoole).
 
-*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 7 en adelante.)*
+#### `services/bff-web` (Fase 7)
+
+Agrega los 3 servicios de negocio en contratos pensados para la SPA. Propaga el mismo JWT del cliente hacia cada servicio interno (cada uno lo valida por su cuenta — no hay credenciales de servicio a servicio aparte).
+
+```bash
+cd services/bff-web
+cp .env.example .env   # ya apunta a los puertos 8001/8002/8003 de los servicios de negocio
+composer install
+php artisan serve --port=8010
+```
+
+Para probarlo de punta a punta hace falta tener corriendo `svc-datos-basicos` (puerto 8001), `svc-movimientos` (8002) y `svc-transferencias` (8003) — ver sus propias secciones de este README.
+
+Endpoints (todos requieren `Authorization: Bearer <JWT>`):
+- `GET /dashboard/{cuentaId}` — compone Datos Básicos + Movimientos en un solo contrato (el único endpoint que agrega de verdad; los otros dos son pass-through adaptado).
+- `GET /cuentas/{cuentaId}/movimientos` — reenvía a Movimientos.
+- `POST /transferencias` (requiere además `Idempotency-Key`) — reenvía a Transferencias.
+
+Correr sus tests: `php artisan test` (9 tests, usando `GuzzleHttp\Handler\MockHandler` para simular los 3 servicios de negocio — opción que permite explícitamente el criterio de aceptación de esta fase, en vez de levantar 3 servidores reales en cada corrida de tests).
+
+Construir su imagen: `docker build -f services/bff-web/Dockerfile -t bp/bff-web .` desde la raíz del repo.
+
+*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 8 en adelante.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
@@ -237,4 +259,4 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`), Fase 4 (`services/svc-transferencias`), Fase 5 (`services/svc-auditoria`) y Fase 6 (`services/svc-notificaciones`) completas. Con esto, las 5 fases previstas de microservicios de negocio + workers están cerradas — quedan las Fases 7-8 (BFFs), 9-10 (frontends), 11-12 (orquestación/CI) y 13 (IaC). Ver `CHECKLIST.md`.
+- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`), Fase 4 (`services/svc-transferencias`), Fase 5 (`services/svc-auditoria`), Fase 6 (`services/svc-notificaciones`) y Fase 7 (`services/bff-web`) completas. Queda la Fase 8 (BFF Móvil), 9-10 (frontends), 11-12 (orquestación/CI) y 13 (IaC). Ver `CHECKLIST.md`.
