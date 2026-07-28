@@ -1,0 +1,53 @@
+sequenceDiagram
+  autonumber
+  actor Cliente
+  participant App as SPA / App Movil
+  participant GW as API Gateway
+  participant IdP as Auth0 (JWKS)
+  participant BFF as BFF
+  participant TS as Servicio Transferencias
+  participant Redis as Redis (Idempotencia)
+  participant DB as Aurora MySQL
+  participant CB as Cliente Circuit Breaker
+  participant Interbank as Red Interbancaria
+  participant Bus as EventBridge/SQS
+  participant Audit as Servicio Auditoria
+  participant Notif as Servicio Notificaciones
+
+  Cliente->>App: Confirma transferencia (monto, cuenta destino)
+  App->>GW: POST /transfers (JWT + Idempotency-Key)
+  GW->>IdP: Valida firma del JWT (JWKS)
+  IdP-->>GW: Token valido
+  GW->>BFF: Reenvia solicitud
+  BFF->>TS: POST /transfers
+  TS->>Redis: Verifica Idempotency-Key
+
+  alt Transferencia ya procesada
+    Redis-->>TS: Respuesta previa cacheada
+    TS-->>BFF: 200 OK (resultado idempotente)
+  else Transferencia nueva
+    TS->>DB: BEGIN TX - Debita cuenta origen
+    DB-->>TS: OK
+    TS->>CB: Ejecuta transferencia externa
+    alt Circuito cerrado y banco destino responde
+      CB->>Interbank: POST /transfer (mTLS)
+      Interbank-->>CB: Confirmacion
+      CB-->>TS: OK
+      TS->>DB: COMMIT
+      TS->>Bus: Publica TransferCompleted
+    else Circuito abierto o el banco destino falla
+      CB-->>TS: Error / timeout
+      TS->>DB: Accion de compensacion (revierte debito)
+      TS->>Bus: Publica TransferFailed
+    end
+    TS->>Redis: Guarda resultado con la Idempotency-Key (TTL)
+    TS-->>BFF: Resultado de la operacion
+  end
+
+  BFF-->>App: Resultado
+  App-->>Cliente: Muestra confirmacion o error
+
+  Bus->>Audit: Entrega evento (SQS)
+  Bus->>Notif: Entrega evento (SQS)
+  Audit->>Audit: Persiste rastro inmutable (DynamoDB + S3 Object Lock)
+  Notif->>Cliente: Notificacion push/email del movimiento

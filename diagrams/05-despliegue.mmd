@@ -1,0 +1,72 @@
+C4Deployment
+  title Diagrama de Despliegue - Infraestructura AWS (BP Banca Digital)
+
+  Deployment_Node(cliente, "Dispositivo del cliente", "Navegador / iOS / Android"){
+    Container(spa, "SPA", "React + TypeScript")
+    Container(mobile, "App movil", "React Native + TypeScript")
+  }
+
+  Deployment_Node(aws, "AWS", "Cuenta AWS de BP"){
+
+    Deployment_Node(edge, "Edge Global", "CloudFront + Route 53"){
+      Container(waf, "WAF + CloudFront", "Proteccion perimetral y TLS")
+      Container(r53, "Route 53", "DNS y failover multi-region")
+    }
+
+    Deployment_Node(regionPrimary, "Region Primaria (ej. us-east-1)", "AWS Region - Activa"){
+
+      Container(apigw, "API Gateway", "Autorizacion JWT, throttling")
+
+      Deployment_Node(vpc, "VPC Privada", "10.0.0.0/16"){
+        Deployment_Node(azA, "Zona de Disponibilidad A", "Subred privada"){
+          Deployment_Node(ecsA, "ECS Fargate - Tareas AZ-A", "Cluster"){
+            Container(bffA, "BFF Web / Movil", "Laravel Octane")
+            Container(svcA, "Servicios de negocio", "Datos, Movimientos, Transferencias")
+            Container(workerA, "Workers", "Laravel Horizon")
+          }
+          ContainerDb(auroraWriter, "Aurora MySQL Writer", "Amazon Aurora Multi-AZ")
+          ContainerDb(redisPrimary, "Redis Primary", "Amazon ElastiCache")
+        }
+        Deployment_Node(azB, "Zona de Disponibilidad B", "Subred privada"){
+          Deployment_Node(ecsB, "ECS Fargate - Tareas AZ-B", "Cluster"){
+            Container(bffB, "BFF Web / Movil", "Laravel Octane")
+            Container(svcB, "Servicios de negocio", "Datos, Movimientos, Transferencias")
+            Container(workerB, "Workers", "Laravel Horizon")
+          }
+          ContainerDb(auroraReader, "Aurora MySQL Reader", "Replica sincronica")
+          ContainerDb(redisReplica, "Redis Replica", "Failover automatico")
+        }
+      }
+
+      Deployment_Node(regionalSvcs, "Servicios administrados regionales", "Multi-AZ nativo"){
+        Container(bus, "EventBridge + SQS", "Bus de eventos con DLQ")
+        ContainerDb(dynMov, "DynamoDB Movimientos", "On-demand capacity")
+        ContainerDb(dynAudit, "DynamoDB Auditoria", "Streams habilitado")
+        ContainerDb(s3worm, "S3 Object Lock", "WORM - retencion regulatoria")
+        Container(pinpointSes, "Pinpoint + SES", "Notificaciones multicanal")
+      }
+    }
+
+    Deployment_Node(regionDR, "Region DR (ej. us-west-2)", "AWS Region - Pasiva"){
+      ContainerDb(auroraDR, "Aurora MySQL Global DB", "Replica de solo lectura, promovible")
+      ContainerDb(dynDR, "DynamoDB Global Tables", "Replica multi-region")
+      ContainerDb(s3DR, "S3 Cross-Region Replication", "Copia de objetos WORM")
+    }
+  }
+
+  Rel(spa, waf, "HTTPS/TLS 1.2+")
+  Rel(mobile, waf, "HTTPS/TLS 1.2+")
+  Rel(waf, apigw, "HTTPS")
+  Rel(r53, edge, "Resuelve y enruta")
+  Rel(r53, regionDR, "Failover si la region primaria falla")
+  Rel(apigw, ecsA, "HTTPS interno + mTLS")
+  Rel(apigw, ecsB, "HTTPS interno + mTLS")
+  Rel(ecsA, auroraWriter, "SQL/TLS")
+  Rel(ecsB, auroraWriter, "SQL/TLS")
+  Rel(auroraWriter, auroraReader, "Replicacion sincronica Multi-AZ")
+  Rel(auroraWriter, auroraDR, "Replicacion Global Database (RPO ~1s)")
+  Rel(dynMov, dynDR, "Global Tables")
+  Rel(dynAudit, dynDR, "Global Tables")
+  Rel(s3worm, s3DR, "Cross-Region Replication")
+  Rel(ecsA, bus, "Publica/consume eventos")
+  Rel(ecsB, bus, "Publica/consume eventos")

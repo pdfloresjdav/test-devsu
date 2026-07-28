@@ -1,0 +1,55 @@
+sequenceDiagram
+  autonumber
+  actor Cliente
+  participant App as App Movil
+  participant BFF as BFF Movil
+  participant KYC as Onfido / iProov
+  participant Rekog as AWS Rekognition
+  participant Core as Core Bancario
+  participant IdP as Auth0
+  participant Bus as EventBridge/SQS
+  participant Audit as Servicio Auditoria
+
+  rect rgb(235,245,255)
+  note over Cliente,IdP: Onboarding (una sola vez)
+  Cliente->>App: Inicia registro como nuevo cliente
+  App->>App: Captura documento de identidad + selfie con prueba de vida
+  App->>BFF: Envia documento + selfie (HTTPS)
+  BFF->>KYC: Verifica documento, selfie y liveness certificada
+  KYC-->>BFF: Resultado (aprobado/rechazado + score)
+
+  alt Verificacion aprobada
+    BFF->>Core: Valida existencia de cliente / productos
+    Core-->>BFF: Cliente validado
+    BFF->>IdP: Crea identidad de usuario (Management API)
+    IdP-->>BFF: Usuario creado
+    BFF->>App: Solicita registrar credencial de acceso
+    App->>IdP: Registra usuario/clave y/o WebAuthn (huella, Face ID)
+    IdP-->>App: Credencial registrada
+    BFF->>Bus: Publica OnboardingCompleted
+    App-->>Cliente: Onboarding exitoso
+  else Verificacion rechazada
+    BFF->>Bus: Publica OnboardingRejected
+    BFF-->>App: Rechazo + motivo
+    App-->>Cliente: No fue posible verificar la identidad
+  end
+  Bus->>Audit: Registra evento de onboarding
+  end
+
+  rect rgb(240,255,240)
+  note over Cliente,IdP: Inicio de sesion recurrente
+  Cliente->>App: Abre la app para iniciar sesion
+  App->>IdP: Authorization Code + PKCE (usuario/clave, huella o WebAuthn)
+  IdP->>App: Solicita segundo factor si aplica (MFA adaptativo)
+  Cliente->>App: Autoriza con biometria nativa (Secure Enclave/StrongBox)
+  IdP-->>App: Redirige con authorization code
+  App->>IdP: Intercambia code + code_verifier por tokens
+  IdP-->>App: access_token (JWT) + refresh_token
+  App->>Bus: (via BFF) Publica LoginSucceeded
+  Bus->>Audit: Registra evento de inicio de sesion
+  end
+
+  opt Revalidacion de riesgo en operaciones sensibles
+    App->>Rekog: Revalida liveness ligero (step-up)
+    Rekog-->>App: Resultado de verificacion
+  end

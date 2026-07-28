@@ -11,10 +11,13 @@ Diseño de arquitectura de solución (modelo C4) para el sistema de banca por in
 ├── docs/
 │   └── arquitectura-banca-digital-bp.md   # Documento completo: decisiones, diagramas C4 y consideraciones transversales
 └── diagrams/
-    ├── 01-contexto.mmd                          # C4 Nivel 1 (contexto)
-    ├── 02-contenedores.mmd                      # C4 Nivel 2 (contenedores)
-    ├── 03-componentes-transferencias.mmd        # C4 Nivel 3 (componentes: Transferencias)
-    └── 04-componentes-auditoria-notificaciones.mmd  # C4 Nivel 3 (componentes: Auditoría/Notificaciones)
+    ├── 01-contexto.mmd                              # C4 Nivel 1 (contexto)
+    ├── 02-contenedores.mmd                          # C4 Nivel 2 (contenedores)
+    ├── 03-componentes-transferencias.mmd            # C4 Nivel 3 (componentes: Transferencias)
+    ├── 04-componentes-auditoria-notificaciones.mmd  # C4 Nivel 3 (componentes: Auditoría/Notificaciones)
+    ├── 05-despliegue.mmd                            # C4 Despliegue (infraestructura AWS, Multi-AZ + DR)
+    ├── 06-secuencia-transferencia.mmd               # C4 Dinámico (secuencia: transferencia interbancaria)
+    └── 07-secuencia-onboarding.mmd                  # C4 Dinámico (secuencia: onboarding + login recurrente)
 ```
 
 El documento principal está en [`docs/arquitectura-banca-digital-bp.md`](docs/arquitectura-banca-digital-bp.md) e incluye los diagramas embebidos como bloques Mermaid (se renderizan automáticamente en GitHub, GitLab, VS Code y Obsidian). Los archivos `.mmd` en `diagrams/` son la misma fuente de cada diagrama, aislada para poder editarla o renderizarla por separado.

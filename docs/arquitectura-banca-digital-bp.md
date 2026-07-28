@@ -16,10 +16,12 @@
 4. [Diagrama de Contexto (C4 — Nivel 1)](#4-diagrama-de-contexto-c4--nivel-1)
 5. [Diagrama de Contenedores (C4 — Nivel 2)](#5-diagrama-de-contenedores-c4--nivel-2)
 6. [Diagrama de Componentes (C4 — Nivel 3)](#6-diagrama-de-componentes-c4--nivel-3)
-7. [Consideraciones transversales](#7-consideraciones-transversales)
-8. [Patrones de diseño aplicados](#8-patrones-de-diseño-aplicados)
-9. [Glosario](#9-glosario)
-10. [Referencias](#10-referencias)
+7. [Diagrama de Despliegue (Infraestructura AWS)](#7-diagrama-de-despliegue-c4--vista-de-infraestructura-aws)
+8. [Diagramas Dinámicos — Flujos Clave](#8-diagramas-dinámicos--flujos-clave)
+9. [Consideraciones transversales](#9-consideraciones-transversales)
+10. [Patrones de diseño aplicados](#10-patrones-de-diseño-aplicados)
+11. [Glosario](#11-glosario)
+12. [Referencias](#12-referencias)
 
 ---
 
@@ -368,47 +370,258 @@ C4Component
 
 ---
 
-## 7. Consideraciones transversales
+## 7. Diagrama de Despliegue (C4 — Vista de Infraestructura AWS)
 
-### 7.1 Normativa y cumplimiento
+**Audiencia:** técnica (infraestructura, DevOps, seguridad).
+
+**Lectura del diagrama:** el tráfico del cliente entra por Route 53 y CloudFront/WAF, llega a API Gateway y de ahí a una VPC privada con dos zonas de disponibilidad (AZ-A y AZ-B), cada una con su propio clúster de tareas ECS Fargate y su réplica de Aurora/Redis. Los servicios administrados regionales (EventBridge/SQS, DynamoDB, S3, Pinpoint/SES) son nativamente Multi-AZ y no requieren gestión de zonas por parte del equipo. Una región secundaria pasiva (DR) mantiene réplicas continuas de Aurora (Global Database), DynamoDB (Global Tables) y S3 (Cross-Region Replication), lista para recibir tráfico si Route 53 detecta la caída de la región primaria.
+
+```mermaid
+C4Deployment
+  title Diagrama de Despliegue - Infraestructura AWS (BP Banca Digital)
+
+  Deployment_Node(cliente, "Dispositivo del cliente", "Navegador / iOS / Android"){
+    Container(spa, "SPA", "React + TypeScript")
+    Container(mobile, "App movil", "React Native + TypeScript")
+  }
+
+  Deployment_Node(aws, "AWS", "Cuenta AWS de BP"){
+
+    Deployment_Node(edge, "Edge Global", "CloudFront + Route 53"){
+      Container(waf, "WAF + CloudFront", "Proteccion perimetral y TLS")
+      Container(r53, "Route 53", "DNS y failover multi-region")
+    }
+
+    Deployment_Node(regionPrimary, "Region Primaria (ej. us-east-1)", "AWS Region - Activa"){
+
+      Container(apigw, "API Gateway", "Autorizacion JWT, throttling")
+
+      Deployment_Node(vpc, "VPC Privada", "10.0.0.0/16"){
+        Deployment_Node(azA, "Zona de Disponibilidad A", "Subred privada"){
+          Deployment_Node(ecsA, "ECS Fargate - Tareas AZ-A", "Cluster"){
+            Container(bffA, "BFF Web / Movil", "Laravel Octane")
+            Container(svcA, "Servicios de negocio", "Datos, Movimientos, Transferencias")
+            Container(workerA, "Workers", "Laravel Horizon")
+          }
+          ContainerDb(auroraWriter, "Aurora MySQL Writer", "Amazon Aurora Multi-AZ")
+          ContainerDb(redisPrimary, "Redis Primary", "Amazon ElastiCache")
+        }
+        Deployment_Node(azB, "Zona de Disponibilidad B", "Subred privada"){
+          Deployment_Node(ecsB, "ECS Fargate - Tareas AZ-B", "Cluster"){
+            Container(bffB, "BFF Web / Movil", "Laravel Octane")
+            Container(svcB, "Servicios de negocio", "Datos, Movimientos, Transferencias")
+            Container(workerB, "Workers", "Laravel Horizon")
+          }
+          ContainerDb(auroraReader, "Aurora MySQL Reader", "Replica sincronica")
+          ContainerDb(redisReplica, "Redis Replica", "Failover automatico")
+        }
+      }
+
+      Deployment_Node(regionalSvcs, "Servicios administrados regionales", "Multi-AZ nativo"){
+        Container(bus, "EventBridge + SQS", "Bus de eventos con DLQ")
+        ContainerDb(dynMov, "DynamoDB Movimientos", "On-demand capacity")
+        ContainerDb(dynAudit, "DynamoDB Auditoria", "Streams habilitado")
+        ContainerDb(s3worm, "S3 Object Lock", "WORM - retencion regulatoria")
+        Container(pinpointSes, "Pinpoint + SES", "Notificaciones multicanal")
+      }
+    }
+
+    Deployment_Node(regionDR, "Region DR (ej. us-west-2)", "AWS Region - Pasiva"){
+      ContainerDb(auroraDR, "Aurora MySQL Global DB", "Replica de solo lectura, promovible")
+      ContainerDb(dynDR, "DynamoDB Global Tables", "Replica multi-region")
+      ContainerDb(s3DR, "S3 Cross-Region Replication", "Copia de objetos WORM")
+    }
+  }
+
+  Rel(spa, waf, "HTTPS/TLS 1.2+")
+  Rel(mobile, waf, "HTTPS/TLS 1.2+")
+  Rel(waf, apigw, "HTTPS")
+  Rel(r53, edge, "Resuelve y enruta")
+  Rel(r53, regionDR, "Failover si la region primaria falla")
+  Rel(apigw, ecsA, "HTTPS interno + mTLS")
+  Rel(apigw, ecsB, "HTTPS interno + mTLS")
+  Rel(ecsA, auroraWriter, "SQL/TLS")
+  Rel(ecsB, auroraWriter, "SQL/TLS")
+  Rel(auroraWriter, auroraReader, "Replicacion sincronica Multi-AZ")
+  Rel(auroraWriter, auroraDR, "Replicacion Global Database (RPO ~1s)")
+  Rel(dynMov, dynDR, "Global Tables")
+  Rel(dynAudit, dynDR, "Global Tables")
+  Rel(s3worm, s3DR, "Cross-Region Replication")
+  Rel(ecsA, bus, "Publica/consume eventos")
+  Rel(ecsB, bus, "Publica/consume eventos")
+```
+
+---
+
+## 8. Diagramas Dinámicos — Flujos Clave
+
+Los diagramas dinámicos del modelo C4 muestran, para un escenario de ejecución concreto, cómo colaboran en tiempo de ejecución los elementos ya definidos en los diagramas estáticos (contenedores/componentes). Se documentan los dos flujos más críticos del ejercicio: una transferencia interbancaria y el onboarding biométrico con su primer inicio de sesión.
+
+### 8.1 Flujo de transferencia interbancaria
+
+**Lectura del diagrama:** ilustra en secuencia el patrón Idempotency Key (evita doble cobro ante reintentos), el patrón Saga con su paso de compensación (si el banco destino falla, se revierte el débito) y el patrón Pub/Sub posterior (Auditoría y Notificaciones se enteran del resultado sin que el Servicio de Transferencias sepa que existen).
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Cliente
+  participant App as SPA / App Movil
+  participant GW as API Gateway
+  participant IdP as Auth0 (JWKS)
+  participant BFF as BFF
+  participant TS as Servicio Transferencias
+  participant Redis as Redis (Idempotencia)
+  participant DB as Aurora MySQL
+  participant CB as Cliente Circuit Breaker
+  participant Interbank as Red Interbancaria
+  participant Bus as EventBridge/SQS
+  participant Audit as Servicio Auditoria
+  participant Notif as Servicio Notificaciones
+
+  Cliente->>App: Confirma transferencia (monto, cuenta destino)
+  App->>GW: POST /transfers (JWT + Idempotency-Key)
+  GW->>IdP: Valida firma del JWT (JWKS)
+  IdP-->>GW: Token valido
+  GW->>BFF: Reenvia solicitud
+  BFF->>TS: POST /transfers
+  TS->>Redis: Verifica Idempotency-Key
+
+  alt Transferencia ya procesada
+    Redis-->>TS: Respuesta previa cacheada
+    TS-->>BFF: 200 OK (resultado idempotente)
+  else Transferencia nueva
+    TS->>DB: BEGIN TX - Debita cuenta origen
+    DB-->>TS: OK
+    TS->>CB: Ejecuta transferencia externa
+    alt Circuito cerrado y banco destino responde
+      CB->>Interbank: POST /transfer (mTLS)
+      Interbank-->>CB: Confirmacion
+      CB-->>TS: OK
+      TS->>DB: COMMIT
+      TS->>Bus: Publica TransferCompleted
+    else Circuito abierto o el banco destino falla
+      CB-->>TS: Error / timeout
+      TS->>DB: Accion de compensacion (revierte debito)
+      TS->>Bus: Publica TransferFailed
+    end
+    TS->>Redis: Guarda resultado con la Idempotency-Key (TTL)
+    TS-->>BFF: Resultado de la operacion
+  end
+
+  BFF-->>App: Resultado
+  App-->>Cliente: Muestra confirmacion o error
+
+  Bus->>Audit: Entrega evento (SQS)
+  Bus->>Notif: Entrega evento (SQS)
+  Audit->>Audit: Persiste rastro inmutable (DynamoDB + S3 Object Lock)
+  Notif->>Cliente: Notificacion push/email del movimiento
+```
+
+### 8.2 Flujo de onboarding biométrico y autenticación
+
+**Lectura del diagrama:** el primer bloque cubre el alta del cliente (documento + selfie con prueba de vida verificados por el proveedor KYC, creación de la identidad en Auth0 y registro de la credencial de acceso). El segundo bloque cubre el inicio de sesión recurrente ya con Authorization Code + PKCE y biometría nativa del dispositivo, sin volver a pasar por el proveedor KYC.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Cliente
+  participant App as App Movil
+  participant BFF as BFF Movil
+  participant KYC as Onfido / iProov
+  participant Rekog as AWS Rekognition
+  participant Core as Core Bancario
+  participant IdP as Auth0
+  participant Bus as EventBridge/SQS
+  participant Audit as Servicio Auditoria
+
+  rect rgb(235,245,255)
+  note over Cliente,IdP: Onboarding (una sola vez)
+  Cliente->>App: Inicia registro como nuevo cliente
+  App->>App: Captura documento de identidad + selfie con prueba de vida
+  App->>BFF: Envia documento + selfie (HTTPS)
+  BFF->>KYC: Verifica documento, selfie y liveness certificada
+  KYC-->>BFF: Resultado (aprobado/rechazado + score)
+
+  alt Verificacion aprobada
+    BFF->>Core: Valida existencia de cliente / productos
+    Core-->>BFF: Cliente validado
+    BFF->>IdP: Crea identidad de usuario (Management API)
+    IdP-->>BFF: Usuario creado
+    BFF->>App: Solicita registrar credencial de acceso
+    App->>IdP: Registra usuario/clave y/o WebAuthn (huella, Face ID)
+    IdP-->>App: Credencial registrada
+    BFF->>Bus: Publica OnboardingCompleted
+    App-->>Cliente: Onboarding exitoso
+  else Verificacion rechazada
+    BFF->>Bus: Publica OnboardingRejected
+    BFF-->>App: Rechazo + motivo
+    App-->>Cliente: No fue posible verificar la identidad
+  end
+  Bus->>Audit: Registra evento de onboarding
+  end
+
+  rect rgb(240,255,240)
+  note over Cliente,IdP: Inicio de sesion recurrente
+  Cliente->>App: Abre la app para iniciar sesion
+  App->>IdP: Authorization Code + PKCE (usuario/clave, huella o WebAuthn)
+  IdP->>App: Solicita segundo factor si aplica (MFA adaptativo)
+  Cliente->>App: Autoriza con biometria nativa (Secure Enclave/StrongBox)
+  IdP-->>App: Redirige con authorization code
+  App->>IdP: Intercambia code + code_verifier por tokens
+  IdP-->>App: access_token (JWT) + refresh_token
+  App->>Bus: (via BFF) Publica LoginSucceeded
+  Bus->>Audit: Registra evento de inicio de sesion
+  end
+
+  opt Revalidacion de riesgo en operaciones sensibles
+    App->>Rekog: Revalida liveness ligero (step-up)
+    Rekog-->>App: Resultado de verificacion
+  end
+```
+
+---
+
+## 9. Consideraciones transversales
+
+### 9.1 Normativa y cumplimiento
 
 - **Protección de datos personales:** minimización de datos biométricos — la imagen facial cruda no se almacena más allá del proceso de onboarding en el proveedor KYC; el sistema solo conserva el resultado de la verificación (aprobado/rechazado + score). Cifrado de PII en reposo (KMS) y en tránsito (TLS 1.2+). Toda lectura de datos personales queda registrada en la base de auditoría (sección 3.9).
 - **PCI-DSS:** si el sistema llega a manejar datos de tarjeta, se recomienda tokenización (AWS Payment Cryptography o el vault de un procesador de pagos) para reducir el alcance de la certificación PCI-DSS a la mínima porción posible del sistema, en vez de certificar el sistema completo.
 - **No repudio / trazabilidad:** la combinación DynamoDB + S3 Object Lock (sección 3.9) garantiza que el rastro de auditoría no pueda alterarse retroactivamente, un requisito habitual en normativa financiera local y en auditorías externas.
 - **Retención:** políticas de ciclo de vida en S3 (Object Lock con retención configurable, típicamente 5-10 años según la regulación local aplicable a BP).
 
-### 7.2 Alta disponibilidad (HA)
+### 9.2 Alta disponibilidad (HA)
 
 - Todos los componentes con estado (Aurora, ElastiCache, colas) desplegados en **Multi-AZ**.
 - Microservicios en ECS Fargate con un mínimo de 2 tareas por Availability Zone, detrás de un Application Load Balancer con health checks activos.
 - API Gateway y CloudFront distribuidos globalmente por diseño (servicios administrados con SLA de alta disponibilidad nativo).
 
-### 7.3 Recuperación ante desastres (DR)
+### 9.3 Recuperación ante desastres (DR)
 
 - Estrategia **activo-pasivo multi-región**: Aurora Global Database (RPO cercano a 1 segundo) y DynamoDB Global Tables para replicación entre regiones.
 - Route 53 con *failover routing* y health checks para redirigir tráfico a la región secundaria ante una falla regional.
 - Objetivos de referencia (a validar con el área de continuidad de negocio de BP): RTO < 4 horas y RPO < 15 minutos para los servicios core (Transferencias, Movimientos).
 
-### 7.4 Seguridad
+### 9.4 Seguridad
 
 - **WAF + Shield Advanced** en el borde (CloudFront/API Gateway) contra OWASP Top 10 y ataques DDoS.
 - **KMS** para cifrado en reposo con llaves separadas por dominio de dato (segmentación relevante para PCI-DSS); **Secrets Manager** con rotación automática de credenciales de servicio.
 - **mTLS** entre microservicios internos — ningún tráfico interno viaja en texto plano, requisito habitual en auditorías PCI-DSS.
 - **IAM Roles de mínimo privilegio** por tarea de ECS (sección 3.14), evitando credenciales compartidas o sobre-privilegiadas.
 
-### 7.5 Monitoreo y excelencia operativa
+### 9.5 Monitoreo y excelencia operativa
 
 - **Amazon CloudWatch** para métricas, logs centralizados y alarmas.
 - **AWS X-Ray** para tracing distribuido — esencial para diferenciar si una lentitud proviene del propio sistema BP o de una dependencia externa (Core bancario, red interbancaria, proveedor KYC), dato clave para gestionar SLAs y decidir cuándo debe abrirse un Circuit Breaker.
 - **CloudWatch Synthetics** (canarios) simulando flujos críticos (login, consulta de movimientos, transferencia) de forma continua.
 - **GuardDuty y Security Hub** para postura de seguridad continua y detección de amenazas.
 
-### 7.6 Auto-healing
+### 9.6 Auto-healing
 
 - ECS Fargate reemplaza automáticamente tareas que fallan los health checks del Load Balancer, sin intervención manual.
 - Auto Scaling basado en métricas de CloudWatch (CPU, latencia, profundidad de las colas SQS) ajusta la capacidad de cada microservicio de forma independiente.
 
-### 7.7 Manejo de costos en AWS
+### 9.7 Manejo de costos en AWS
 
 - **Fargate** evita pagar por capacidad ociosa de servidores EC2 que habría que gestionar manualmente.
 - Los consumidores asíncronos (Auditoría, Notificaciones) escalan según profundidad de cola, evitando sobreaprovisionar cómputo para cargas que son, por naturaleza, intermitentes.
@@ -416,7 +629,7 @@ C4Component
 
 ---
 
-## 8. Patrones de diseño aplicados
+## 10. Patrones de diseño aplicados
 
 | Patrón | Dónde se aplica | Por qué |
 |---|---|---|
@@ -436,7 +649,7 @@ C4Component
 
 ---
 
-## 9. Glosario
+## 11. Glosario
 
 - **BFF (Backend for Frontend):** capa de backend dedicada a un canal de frontend específico.
 - **PKCE (Proof Key for Code Exchange):** extensión de OAuth2 que protege el flujo de Authorization Code en clientes públicos.
@@ -449,7 +662,7 @@ C4Component
 
 ---
 
-## 10. Referencias
+## 12. Referencias
 
 - OAuth 2.0 Security Best Current Practice (RFC 9700 / borrador de OAuth 2.1).
 - RFC 7636 — Proof Key for Code Exchange (PKCE).
