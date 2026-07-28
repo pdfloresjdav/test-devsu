@@ -7,6 +7,7 @@ Este archivo gobierna cómo debo (Claude) trabajar en este proyecto. Se aplica a
 1. **`docs/arquitectura-banca-digital-bp.md`** es la fuente de verdad de las decisiones de arquitectura (stack, patrones, servicios AWS). Ninguna decisión de esa lista se cambia "sobre la marcha" al programar: si el código exige desviarse de una decisión, se detiene el trabajo, se explica el conflicto al usuario y se actualiza el documento primero.
 2. **`CHECKLIST.md`** es la fuente de verdad de qué falta por construir y en qué orden.
 3. **`WORKLOG.md`** es la fuente de verdad de qué se hizo realmente y cómo se verificó.
+4. **`README.md`** es la fuente de verdad de cómo levantar el proyecto de cero (requisitos previos + pasos de instalación/arranque) para cualquiera que clone el repo, en local o en un servidor. Es la única de las cuatro pensada para un lector externo, no para gobernar el propio trabajo de desarrollo.
 
 Antes de tocar código en una sesión nueva: leer `CHECKLIST.md` (qué sigue) y las últimas 2-3 entradas de `WORKLOG.md` (qué se hizo y qué quedó pendiente).
 
@@ -18,6 +19,7 @@ Antes de tocar código en una sesión nueva: leer `CHECKLIST.md` (qué sigue) y 
 - Si durante el desarrollo aparece trabajo no previsto (una dependencia faltante, un ajuste de diseño), se agrega como ítem nuevo al checklist en vez de hacerlo "silenciosamente" y seguir de largo.
 - Al cerrar un ítem (o un grupo pequeño de ítems relacionados de la misma fase), se agrega la entrada correspondiente en `WORKLOG.md` **antes** de pasar al siguiente ítem.
 - No completar fases enteras sin pausar: al terminar una fase completa del checklist, resumir al usuario lo hecho y esperar confirmación antes de iniciar la siguiente fase.
+- **Ninguna fase se da por cerrada sin actualizar `README.md`.** Si la fase agrega algo que alguien necesitaría para levantar el proyecto en una máquina limpia (un nuevo servicio, una nueva variable de entorno, un nuevo comando, un nuevo requisito previo como una versión de lenguaje o una herramienta), eso tiene que quedar reflejado en la sección de instalación del README en el mismo commit que cierra la fase — no después, no "cuando se acuerde". El README debe poder seguirse de punta a punta por alguien que nunca vio el proyecto, sin tener que adivinar pasos a partir del código o del checklist.
 
 ## Convenciones técnicas del proyecto
 

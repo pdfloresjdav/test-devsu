@@ -84,3 +84,11 @@ Bitácora cronológica del desarrollo. Cada entrada corresponde a uno o más ít
   - `firebase/php-jwt` en la franja `^6.10` tiene un advisory de seguridad activo (`PKSA-y2cr-5h3j-g3ys`); se subió la dependencia a `^7.0` (segura) en vez de ignorar el advisory. Sin impacto funcional.
   - El ítem 1.2 original planteaba un modo local con "clave RSA propia" separado del modo Auth0. Al implementarlo se detectó que el mock-oidc ya expone un JWKS real (visto en la Fase 0), así que se unificó a un solo flujo de validación por JWKS para ambos modos — más simple y más fiel a producción. Ya se había ajustado la redacción del ítem en el checklist antes de empezar a programar (ver auditoría previa).
 - **Bloqueos / pendientes para retomar:** Fase 1 completa. Siguiente paso: Fase 2 (`services/svc-datos-basicos`).
+
+## 2026-07-28 (continuación — README.md como fuente de verdad de instalación)
+
+- **Ítem(s) del checklist:** N/A (proceso transversal, a pedido del usuario)
+- **Qué se hizo:** el usuario notó que `README.md` seguía describiendo solo el documento de arquitectura y no tenía pasos de instalación/arranque para un entorno limpio (local o servidor), a pesar de que ya existen `docker-compose.yml`, `Makefile`, `.env.example` y `packages/bp-common` desde las Fases 0 y 1. Se reescribió `README.md` con: tabla de requisitos previos (Docker, PHP 8.3+, Composer, Node), pasos de puesta en marcha (`git clone` → `.env` → `make up` → `make ps` + chequeos manuales de cada servicio), instrucciones para correr los tests de `packages/bp-common`, y placeholders explícitos para las secciones de `services/*` y de los frontends que se irán llenando fase a fase. También se agregó `README.md` como cuarta "fuente de verdad" en `CLAUDE.md` (junto a la arquitectura, el checklist y el worklog) y una regla explícita: ninguna fase se da por cerrada sin actualizar la sección de instalación del README con lo que esa fase haya agregado.
+- **Cómo se verificó:** revisión manual de que los pasos descritos en el README coinciden exactamente con los comandos ya verificados en las entradas de Fase 0 y Fase 1 de este mismo archivo.
+- **Desviaciones:** ninguna.
+- **Bloqueos / pendientes para retomar:** ninguno. A partir de ahora, cerrar la Fase 2 debe incluir agregar su propia sub-sección de instalación en el README (cómo levantar `services/svc-datos-basicos`).
