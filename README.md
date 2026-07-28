@@ -91,7 +91,32 @@ composer install
 
 ### Microservicios (`services/*`)
 
-*(Se agrega aquí, servicio por servicio, a medida que cada uno se construye en el checklist — Fase 2 en adelante. Por ahora no hay ninguno instanciado todavía.)*
+#### `services/svc-datos-basicos` (Fase 2)
+
+Compone datos del Core Bancario y del Sistema Complementario de Cliente (patrón API Composition). Mientras esos sistemas no existan, usa clientes fake con datos fijos (clientes de prueba `1001` y `1002`).
+
+```bash
+cd services/svc-datos-basicos
+cp .env.example .env   # ya viene con OAUTH_MODE=local apuntando al mock-oidc
+composer install
+php artisan serve --port=8001
+```
+
+Endpoints:
+- `GET /health` — healthcheck (automático, provisto por `bp-common`).
+- `GET /clientes/{id}` — requiere `Authorization: Bearer <JWT>` válido contra el emisor configurado (mock-oidc en local, Auth0 en producción). Prueba con `1001` o `1002`.
+
+Correr sus tests: `php artisan test` (10 tests: fakes, composición y el endpoint completo, incluyendo el rechazo sin token).
+
+Para apuntar a los sistemas reales cuando existan: `CORE_BANCARIO_DRIVER=http` + `CORE_BANCARIO_BASE_URL=...` y/o `CLIENTE_COMPLEMENTARIO_DRIVER=http` + `CLIENTE_COMPLEMENTARIO_BASE_URL=...` en su `.env` — no requiere cambiar código.
+
+Construir su imagen (Octane + Swoole, igual que en producción) desde la **raíz del repo** (necesita `packages/bp-common` en el contexto):
+
+```bash
+docker build -f services/svc-datos-basicos/Dockerfile -t bp/svc-datos-basicos .
+```
+
+*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 3 en adelante.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
@@ -116,4 +141,4 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fase 0 (entorno local) y Fase 1 (`packages/bp-common`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.
+- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`) y Fase 2 (`services/svc-datos-basicos`) completas. Ver `CHECKLIST.md` para el resto de fases pendientes.

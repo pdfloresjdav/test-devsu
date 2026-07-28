@@ -52,13 +52,13 @@
 
 **Criterio de aceptación:** expone un endpoint que compone datos de dos fuentes simuladas (Core + complementario) y sus tests pasan.
 
-- [ ] 2.1 Scaffold Laravel + Octane + Dockerfile
-- [ ] 2.2 Cliente fake del Core Bancario (fixture/HTTP fake) tras interfaz `CoreBancarioClient`
-- [ ] 2.3 Cliente fake del Sistema Complementario tras interfaz `ClienteComplementarioClient`
-- [ ] 2.4 Endpoint de composición `GET /clientes/{id}` (patrón API Composition)
-- [ ] 2.5 Aplicar middleware de `bp-common` (auth, correlation-id, healthcheck)
-- [ ] 2.6 Tests (unitarios + endpoint)
-- [ ] 2.7 `.env.example` documentando cómo apuntar los clientes fake a los sistemas reales el día que existan
+- [x] 2.1 Scaffold Laravel + Octane + Dockerfile
+- [x] 2.2 Cliente fake del Core Bancario (fixture/HTTP fake) tras interfaz `CoreBancarioClient`
+- [x] 2.3 Cliente fake del Sistema Complementario tras interfaz `ClienteComplementarioClient`
+- [x] 2.4 Endpoint de composición `GET /clientes/{id}` (patrón API Composition)
+- [x] 2.5 Aplicar middleware de `bp-common` (auth, correlation-id, healthcheck)
+- [x] 2.6 Tests (unitarios + endpoint)
+- [x] 2.7 `.env.example` documentando cómo apuntar los clientes fake a los sistemas reales el día que existan
 
 ---
 

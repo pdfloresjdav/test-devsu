@@ -92,3 +92,25 @@ Bitácora cronológica del desarrollo. Cada entrada corresponde a uno o más ít
 - **Cómo se verificó:** revisión manual de que los pasos descritos en el README coinciden exactamente con los comandos ya verificados en las entradas de Fase 0 y Fase 1 de este mismo archivo.
 - **Desviaciones:** ninguna.
 - **Bloqueos / pendientes para retomar:** ninguno. A partir de ahora, cerrar la Fase 2 debe incluir agregar su propia sub-sección de instalación en el README (cómo levantar `services/svc-datos-basicos`).
+
+## 2026-07-28 (continuación — Fase 2: `services/svc-datos-basicos`)
+
+- **Ítem(s) del checklist:** 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7
+- **Qué se hizo:**
+  - Scaffold de una app Laravel 12 real (`composer create-project laravel/laravel`) + Laravel Octane, requiriendo `bp/common` vía path-repository (`../../packages/bp-common`).
+  - `App\Contracts\CoreBancarioClient` / `ClienteComplementarioClient`: interfaces del patrón API Composition. Cada una con implementación `Fake*` (fixture en memoria con clientes `1001`/`1002`) e implementación `Http*` (real, vía Guzzle), seleccionables por `.env` (`CORE_BANCARIO_DRIVER`/`CLIENTE_COMPLEMENTARIO_DRIVER` = `fake`|`http`) desde `AppServiceProvider`.
+  - `App\Services\ClienteCompositionService`: compone ambas fuentes en un solo contrato de salida.
+  - `GET /clientes/{id}` (`ClienteController`) protegido con `BP\Common\Auth\JwtAuthMiddleware`; `GET /health` queda disponible automáticamente por `bp-common`.
+  - `Dockerfile` (PHP 8.3 + Swoole vía PECL, instalado dentro del contenedor Linux — ver desviación abajo) pensado para construirse con el **contexto en la raíz del monorepo** (`docker build -f services/svc-datos-basicos/Dockerfile .`), porque necesita copiar `packages/bp-common`.
+  - 10 tests (PHPUnit): fakes (2), `ClienteCompositionService` (1, con mocks), y feature del endpoint completo (3: sin token → 401, cliente existente → 200 compuesto, cliente inexistente → 404), más los 4 tests de ejemplo del skeleton de Laravel.
+  - **Refactor retroactivo en `packages/bp-common`:** se movieron `RsaKeyPair` y `FakeJwksProvider` de `tests/Support/` (autoload-dev, solo visible dentro del propio paquete) a `src/Testing/` (autoload normal), para que los 7 servicios puedan reutilizar el mismo helper de JWT de prueba en sus propios tests sin duplicarlo. Se re-corrieron los 20 tests de `bp-common` tras el cambio — siguen en verde.
+- **Cómo se verificó:**
+  - `php artisan test` en el servicio → 10 passed, 23 assertions.
+  - `php artisan route:list` → confirma `GET /clientes/{clienteId}` y `GET /health` registradas.
+  - Prueba manual con `php artisan serve`: `/health` responde con el nombre del servicio; `/clientes/1001` sin token → 401.
+  - **Build real de la imagen Docker** (`docker build -f services/svc-datos-basicos/Dockerfile -t bp/svc-datos-basicos:test .` desde la raíz) → exitoso tras dos ajustes (ver desviaciones). Se corrió el contenedor (`docker run ... -p 8342:8000`) y `curl http://127.0.0.1:8342/health` respondió correctamente sobre Swoole real (no RoadRunner), confirmando que la imagen productiva funciona de punta a punta.
+- **Desviaciones respecto a la arquitectura o al checklist:**
+  1. Swoole no se pudo compilar en el host (macOS, falta `pkg-config` del lado del sistema operativo) — no es un problema de la imagen Docker. Se usa **RoadRunner** para `php artisan octane:start` en el host durante desarrollo local (Octane lo soporta igual de bien; el swap es solo configuración, no código de aplicación), y **Swoole real dentro del Dockerfile** (que sí compila en el contenedor Linux), preservando la decisión de arquitectura documentada para lo que realmente se despliega.
+  2. El primer intento de build de la imagen falló por faltar `libbrotli-dev` (dependencia de compilación de Swoole) — se agregó al `apt-get install` del Dockerfile.
+  3. El segundo intento falló porque `composer.lock` se había generado con el PHP del host (8.5.8) y resolvió paquetes Symfony 8.x que exigen PHP ≥8.4.1, incompatibles con el PHP 8.3 de la imagen. Se fijó `"config.platform.php": "8.3.99"` en `composer.json` y se regeneró el lock — asegura que cualquiera que corra `composer install/update` en este servicio (sin importar su PHP local) resuelva versiones compatibles con el mínimo documentado (PHP 8.3+), evitando este mismo problema a futuro en los otros 6 servicios.
+- **Bloqueos / pendientes para retomar:** Fase 2 completa. Siguiente paso: Fase 3 (`services/svc-movimientos`, patrón Cache-Aside).

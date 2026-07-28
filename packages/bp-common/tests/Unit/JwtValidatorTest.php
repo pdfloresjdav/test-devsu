@@ -4,8 +4,8 @@ namespace BP\Common\Tests\Unit;
 
 use BP\Common\Auth\JwtValidationException;
 use BP\Common\Auth\JwtValidator;
-use BP\Common\Tests\Support\FakeJwksProvider;
-use BP\Common\Tests\Support\RsaKeyPair;
+use BP\Common\Testing\FakeJwksProvider;
+use BP\Common\Testing\RsaKeyPair;
 use PHPUnit\Framework\TestCase;
 
 class JwtValidatorTest extends TestCase

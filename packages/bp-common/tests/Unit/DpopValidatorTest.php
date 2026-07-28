@@ -5,7 +5,7 @@ namespace BP\Common\Tests\Unit;
 use BP\Common\Auth\DpopValidationException;
 use BP\Common\Auth\DpopValidator;
 use BP\Common\Auth\InMemoryDpopReplayStore;
-use BP\Common\Tests\Support\RsaKeyPair;
+use BP\Common\Testing\RsaKeyPair;
 use Firebase\JWT\JWT;
 use PHPUnit\Framework\TestCase;
 

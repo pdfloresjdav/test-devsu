@@ -4,8 +4,8 @@ namespace BP\Common\Tests;
 
 use BP\Common\Auth\JwksProviderInterface;
 use BP\Common\BpCommonServiceProvider;
-use BP\Common\Tests\Support\FakeJwksProvider;
-use BP\Common\Tests\Support\RsaKeyPair;
+use BP\Common\Testing\FakeJwksProvider;
+use BP\Common\Testing\RsaKeyPair;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 abstract class TestCase extends OrchestraTestCase

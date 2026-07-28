@@ -1,6 +1,6 @@
 <?php
 
-namespace BP\Common\Tests\Support;
+namespace BP\Common\Testing;
 
 use Firebase\JWT\JWT;
 
