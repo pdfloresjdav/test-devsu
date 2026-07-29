@@ -10,6 +10,13 @@ return [
         'issuer' => env('OIDC_ISSUER', 'http://localhost:4011'),
         'audience' => env('OIDC_AUDIENCE', 'bp-web'),
         'jwks_cache_ttl' => (int) env('JWKS_CACHE_TTL', 3600),
+        // Opcional: URL por la que ESTE proceso alcanza fisicamente al emisor
+        // para el discovery/JWKS, cuando difiere del `issuer` esperado en el
+        // claim `iss` (ej. dentro de docker-compose, donde el emisor se ve
+        // como http://mock-oidc:80 desde otro contenedor pero los tokens
+        // dicen iss=http://localhost:4011 porque asi lo vio el navegador).
+        // Si se deja vacio, se usa el mismo valor que `issuer` (Fases 1-10).
+        'discovery_issuer' => env('OIDC_DISCOVERY_ISSUER'),
     ],
 
     'auth0' => [

@@ -24,4 +24,7 @@ WORKDIR /app/services/svc-notificaciones
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
     && composer dump-autoload --optimize
 
-CMD ["php", "artisan", "notifications:consume"]
+# migrate/notifications:setup-infrastructure son idempotentes -- se corren
+# en cada arranque para dejar su propia cola SQS+DLQ, regla de EventBridge
+# y tabla DynamoDB listas sin un paso manual aparte.
+CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan notifications:setup-infrastructure && php artisan notifications:consume"]

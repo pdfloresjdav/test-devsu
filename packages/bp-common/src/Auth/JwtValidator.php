@@ -13,14 +13,30 @@ use UnexpectedValueException;
  * Valida un JWT (firma, expiracion, issuer, audience) contra el JWKS del
  * emisor configurado. El mismo flujo sirve tanto para el mock-oidc local
  * como para Auth0/Okta real -- ver decision 3.5 del documento de arquitectura.
+ *
+ * `$issuer` y `$discoveryIssuer` son conceptos distintos que en Fases 1-10
+ * (todo corriendo en el host) coincidian siempre, pero divergen al
+ * orquestar los servicios dentro de docker-compose (Fase 11): `$issuer` es
+ * el valor exacto que trae el claim `iss` del token (el mismo que ve el
+ * navegador, ej. http://localhost:4011, porque ahi es donde el SPA/app
+ * movil inicio sesion) -- eso NO cambia. `$discoveryIssuer` es la URL por
+ * la que ESTE proceso puede alcanzar fisicamente el emisor para bajar su
+ * documento de discovery y su JWKS (ej. http://mock-oidc:80 dentro de la
+ * red de docker-compose, un nombre de host que el navegador no resuelve
+ * pero un contenedor si). Si no se especifica, se asume igual a `$issuer`
+ * (comportamiento anterior, valido cuando todo corre en el mismo host).
  */
 class JwtValidator
 {
+    private readonly string $discoveryIssuer;
+
     public function __construct(
         private readonly JwksProviderInterface $jwksProvider,
         private readonly string $issuer,
         private readonly string $audience,
+        ?string $discoveryIssuer = null,
     ) {
+        $this->discoveryIssuer = $discoveryIssuer ?: $issuer;
     }
 
     /**
@@ -30,7 +46,7 @@ class JwtValidator
      */
     public function validate(string $token): array
     {
-        $jwks = $this->jwksProvider->getJwks($this->issuer);
+        $jwks = $this->jwksProvider->getJwks($this->discoveryIssuer);
 
         try {
             $keys = JWK::parseKeySet($jwks);

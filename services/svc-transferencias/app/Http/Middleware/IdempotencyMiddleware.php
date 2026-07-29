@@ -40,13 +40,24 @@ class IdempotencyMiddleware
 
         $request->attributes->set('idempotency_key', $idempotencyKey);
 
-        /** @var JsonResponse $response */
         $response = $next($request);
 
-        $this->cache->put($cacheKey, [
-            'status' => $response->getStatusCode(),
-            'body' => $response->getData(true),
-        ], $this->ttlSeconds);
+        // Si un error no controlado en capas de mas abajo produce una
+        // respuesta que no es JSON (ej. la pagina de error generica de
+        // Laravel para una Exception no manejada, en vez de un
+        // ApiResponse::error), no hay nada serializable para cachear bajo
+        // la Idempotency-Key -- y cachear un 500 generico seria ademas
+        // incorrecto (el cliente deberia poder reintentar). Se deja pasar
+        // la respuesta tal cual, sin ocultar el error real detras de un
+        // BadMethodCallException por llamar a getData() en algo que no es
+        // un JsonResponse (encontrado en la Fase 11 con un bug real de
+        // bcmath faltante que este catch estaba enmascarando).
+        if ($response instanceof JsonResponse) {
+            $this->cache->put($cacheKey, [
+                'status' => $response->getStatusCode(),
+                'body' => $response->getData(true),
+            ], $this->ttlSeconds);
+        }
 
         return $response;
     }

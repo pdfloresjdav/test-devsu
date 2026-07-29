@@ -5,7 +5,7 @@
 FROM php:8.3-cli AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git unzip libzip-dev libpq-dev libbrotli-dev pkg-config \
+        git unzip libzip-dev libpq-dev libbrotli-dev pkg-config curl \
     && docker-php-ext-install pcntl sockets zip \
     && pecl install swoole \
     && docker-php-ext-enable swoole \
@@ -25,4 +25,7 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000"]
+# migrate/movimientos:setup-table/events:setup-bus son idempotentes -- se
+# corren en cada arranque para que `docker compose up` deje la tabla
+# DynamoDB y el bus de EventBridge listos sin un paso manual aparte.
+CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan movimientos:setup-table && php artisan events:setup-bus && php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000"]

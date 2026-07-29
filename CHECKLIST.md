@@ -190,9 +190,9 @@
 
 **Criterio de aceptación:** desde `docker compose up` (infraestructura + los 7 servicios) se puede hacer login en la SPA, ver movimientos y completar una transferencia, viendo el registro correspondiente en auditoría y el log de notificación.
 
-- [ ] 11.1 `docker-compose.yml` extendido con los 7 servicios backend
-- [ ] 11.2 Script de arranque único (`make dev` o similar)
-- [ ] 11.3 Prueba manual de extremo a extremo documentada en WORKLOG
+- [x] 11.1 `docker-compose.yml` extendido con los 7 servicios backend
+- [x] 11.2 Script de arranque único (`make dev` — `make up` se deja intacto como "solo infraestructura", el flujo ya usado en las Fases 2-10)
+- [x] 11.3 Prueba manual de extremo a extremo documentada en WORKLOG — login real (Authorization Code + PKCE completo contra mock-oidc, sin navegador, vía curl simulando el formulario), consulta de movimientos y transferencia real a través de `bff-web`, con el registro correspondiente confirmado en los logs de `svc-auditoria` y `svc-notificaciones`.
 
 ---
 

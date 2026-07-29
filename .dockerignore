@@ -1,0 +1,16 @@
+# Nunca hornear un .env real (con credenciales/keys locales) dentro de una
+# imagen -- los servicios en docker-compose reciben su configuracion
+# enteramente via `environment:`, nunca via un archivo .env copiado.
+**/.env
+**/.env.local
+
+# Dependencias que cada Dockerfile reinstala dentro de la imagen.
+**/vendor
+**/node_modules
+
+.git
+frontend-web
+frontend-mobile
+docs
+diagrams
+*.md

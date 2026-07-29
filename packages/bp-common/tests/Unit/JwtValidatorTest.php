@@ -101,4 +101,29 @@ class JwtValidatorTest extends TestCase
         $this->expectExceptionMessage('Audience inesperada');
         $validator->validate($token);
     }
+
+    public function test_usa_un_discovery_issuer_distinto_para_bajar_el_jwks_sin_afectar_la_validacion_del_iss(): void
+    {
+        // Caso real: dentro de docker-compose, este proceso solo puede alcanzar
+        // al emisor por http://mock-oidc:80, pero los tokens que emite siguen
+        // trayendo iss=http://localhost:4011 (lo que vio el navegador al loguearse).
+        $discoveryIssuer = 'http://mock-oidc:80';
+        $keyPair = new RsaKeyPair();
+        $jwksProvider = new FakeJwksProvider($keyPair->toJwks());
+
+        $validator = new JwtValidator($jwksProvider, self::ISSUER, self::AUDIENCE, $discoveryIssuer);
+
+        $token = $keyPair->sign([
+            'iss' => self::ISSUER,
+            'aud' => self::AUDIENCE,
+            'sub' => 'user-1',
+            'exp' => time() + 3600,
+            'iat' => time(),
+        ]);
+
+        $claims = $validator->validate($token);
+
+        $this->assertSame('user-1', $claims['sub']);
+        $this->assertSame($discoveryIssuer, $jwksProvider->lastRequestedIssuer());
+    }
 }

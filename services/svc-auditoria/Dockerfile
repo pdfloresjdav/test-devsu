@@ -27,4 +27,7 @@ WORKDIR /app/services/svc-auditoria
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
     && composer dump-autoload --optimize
 
-CMD ["php", "artisan", "audit:consume"]
+# migrate/audit:setup-infrastructure son idempotentes -- se corren en cada
+# arranque para que `docker compose up` deje la cola SQS+DLQ, la regla de
+# EventBridge, la tabla DynamoDB y el bucket S3 listos sin un paso manual.
+CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan audit:setup-infrastructure && php artisan audit:consume"]

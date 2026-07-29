@@ -51,6 +51,7 @@ class BpCommonServiceProvider extends ServiceProvider
             jwksProvider: $app->make(JwksProviderInterface::class),
             issuer: $this->resolveIssuer(),
             audience: $this->resolveAudience(),
+            discoveryIssuer: config('bp-common.jwt.discovery_issuer') ?: null,
         ));
 
         $this->app->singleton(DpopValidator::class, fn ($app) => new DpopValidator(

@@ -308,6 +308,21 @@ Pantallas (enrutadas con un router simple basado en estado de React, no `@react-
 
 > **Limitación importante de este entorno:** no hay Xcode Simulator, Android SDK/emulador, `adb` ni `watchman` instalados acá, así que el criterio de aceptación de esta fase ("funcionando en el emulador") no se pudo verificar de esa forma. Se verificó con lint/type-check/tests automatizados reales, más un smoke test real sirviendo la app con `npm run web` (Expo con react-native-web, en el puerto 19006 ya reservado para esta app en `mock-oidc`) y una comprobación manual del flujo OAuth contra el emisor real (ver WORKLOG.md). **Face ID/BiometricPrompt real y `expo-secure-store` nativo quedan pendientes de probarse en un dispositivo o development build real** — no funcionan en la vista web de desarrollo (documentado en `src/auth/biometric.ts` y `src/storage/secureStorage.ts`).
 
+## Orquestación completa (Fase 11)
+
+Además de `make up` (solo infraestructura, el flujo de desarrollo de las Fases 2-10 con cada servicio corriendo a mano vía `php artisan serve`/`octane:start`), `make dev` levanta **todo**: infraestructura + los 7 servicios backend, cada uno buildeado desde su propio `Dockerfile`.
+
+```bash
+make dev       # infra + los 7 servicios backend (build + up -d)
+make dev-ps    # estado de los 11 contenedores
+make dev-logs  # logs en vivo de todo el stack
+make dev-down  # apaga todo (los datos de MySQL/LocalStack persisten en sus volúmenes)
+```
+
+Cada contenedor corre sus migraciones y sus comandos de provisión idempotentes (tabla DynamoDB, bus/reglas de EventBridge, colas SQS) automáticamente al arrancar — no hace falta ningún paso manual aparte de `make dev`. Puertos expuestos: `svc-datos-basicos` 8001, `svc-movimientos` 8002, `svc-transferencias` 8003, `bff-mobile` 8004, `bff-web` 8010 (`svc-auditoria`/`svc-notificaciones` son workers puros, sin puerto HTTP).
+
+Con el stack completo arriba, el criterio de aceptación de esta fase (login → ver movimientos → completar una transferencia → verlo reflejado en auditoría/notificaciones) se verificó de punta a punta contra los contenedores reales — incluido un login real (Authorization Code + PKCE) contra `mock-oidc` sin necesitar un navegador, ver [`WORKLOG.md`](WORKLOG.md) para el detalle completo de cómo.
+
 ## Stack propuesto
 
 - **Frontend:** React + TypeScript (SPA) y React Native + TypeScript (app móvil).

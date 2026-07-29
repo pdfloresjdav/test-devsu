@@ -5,8 +5,8 @@
 FROM php:8.3-cli AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git unzip libzip-dev libpq-dev libbrotli-dev pkg-config default-mysql-client \
-    && docker-php-ext-install pcntl sockets zip pdo_mysql \
+        git unzip libzip-dev libpq-dev libbrotli-dev pkg-config default-mysql-client curl \
+    && docker-php-ext-install pcntl sockets zip pdo_mysql bcmath \
     && pecl install swoole \
     && docker-php-ext-enable swoole \
     && rm -rf /var/lib/apt/lists/*
@@ -25,4 +25,7 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000"]
+# migrate --force es idempotente -- se corre en cada arranque. Depende de
+# que MySQL ya este sano (ver `depends_on: condition: service_healthy` en
+# docker-compose.yml) para no fallar por una conexion todavia no aceptada.
+CMD ["sh", "-c", "php artisan migrate --force && php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000"]

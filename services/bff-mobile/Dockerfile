@@ -5,7 +5,7 @@
 FROM php:8.3-cli AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git unzip libzip-dev libpq-dev libbrotli-dev pkg-config \
+        git unzip libzip-dev libpq-dev libbrotli-dev pkg-config curl \
     && docker-php-ext-install pcntl sockets zip \
     && pecl install swoole \
     && docker-php-ext-enable swoole \
@@ -25,4 +25,4 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
 
 EXPOSE 8000
 
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000"]
+CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000"]

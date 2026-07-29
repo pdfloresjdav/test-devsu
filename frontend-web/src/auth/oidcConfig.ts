@@ -13,7 +13,11 @@ export const oidcSettings: UserManagerSettings = {
   redirect_uri: `${window.location.origin}/callback`,
   post_logout_redirect_uri: window.location.origin,
   response_type: 'code',
-  scope: 'openid profile email offline_access',
+  // "bp-web" es el API scope/resource configurado en mock-oidc (y el que
+  // habria que declarar igual en Auth0/Okta real) para que el access
+  // token traiga un "aud" -- sin pedirlo explicitamente el token no trae
+  // audience en absoluto y bp-common lo rechaza (ver docker-compose.yml).
+  scope: 'openid profile email offline_access bp-web',
   automaticSilentRenew: true,
   userStore: new WebStorageStateStore({ store: window.sessionStorage }),
 };

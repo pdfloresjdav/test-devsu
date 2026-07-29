@@ -8,6 +8,10 @@ export const OIDC_ISSUER = process.env.EXPO_PUBLIC_OIDC_ISSUER ?? 'http://localh
  */
 export const OIDC_CLIENT_ID = process.env.EXPO_PUBLIC_OIDC_CLIENT_ID ?? 'bp-web';
 
-export const OIDC_SCOPES = ['openid', 'profile', 'email', 'offline_access'];
+// "bp-web" es el API scope/resource configurado en mock-oidc (y el que
+// habria que declarar igual en Auth0/Okta real) para que el access token
+// traiga un "aud" -- sin pedirlo explicitamente el token no trae audience
+// en absoluto y bp-common lo rechaza (ver docker-compose.yml).
+export const OIDC_SCOPES = ['openid', 'profile', 'email', 'offline_access', 'bp-web'];
 
 export const REFRESH_TOKEN_STORAGE_KEY = 'bp:mobile:refresh-token';
