@@ -17,6 +17,6 @@ class FakeIdentityProviderClient implements IdentityProviderClient
 {
     public function createUser(string $customerId, string $name, string $email): array
     {
-        return ['user_id' => 'auth0|fake-' . Str::uuid()];
+        return ['user_id' => 'auth0|fake-'.Str::uuid()];
     }
 }

@@ -52,7 +52,7 @@ class SetupNotificationInfrastructure extends Command
     }
 
     /**
-     * @param array<string, string> $attributes
+     * @param  array<string, string>  $attributes
      */
     private function createQueueIfNotExists(SqsClient $sqs, string $name, array $attributes = []): string
     {

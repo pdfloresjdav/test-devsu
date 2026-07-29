@@ -13,7 +13,7 @@ class HttpMovementsClient extends HttpUpstreamClient implements MovementsClient
 
     public function list(string $accountId, string $bearerToken, int $limit = 20): array
     {
-        $response = $this->request('GET', rtrim($this->baseUrl, '/') . "/accounts/{$accountId}/movements", [
+        $response = $this->request('GET', rtrim($this->baseUrl, '/')."/accounts/{$accountId}/movements", [
             'headers' => $this->authHeader($bearerToken),
             'query' => ['limit' => $limit],
         ]);

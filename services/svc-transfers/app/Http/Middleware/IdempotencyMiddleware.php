@@ -20,8 +20,7 @@ class IdempotencyMiddleware
     public function __construct(
         private readonly CacheRepository $cache,
         private readonly int $ttlSeconds,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {

@@ -14,8 +14,7 @@ class MovementController extends Controller
     public function __construct(
         private readonly MovementsRepository $repository,
         private readonly EventPublisherInterface $events,
-    ) {
-    }
+    ) {}
 
     public function index(string $accountId, Request $request): JsonResponse
     {

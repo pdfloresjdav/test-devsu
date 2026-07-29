@@ -20,8 +20,7 @@ class DynamoDbAuditRepository implements AuditRepository
         private readonly DynamoDbClient $client,
         private readonly Marshaler $marshaler,
         private readonly string $table,
-    ) {
-    }
+    ) {}
 
     public function register(string $actor, string $action, array $detail): array
     {
@@ -55,7 +54,7 @@ class DynamoDbAuditRepository implements AuditRepository
      * real AWS -- but evidence that the content wasn't altered after it
      * was written).
      *
-     * @param array<string, mixed> $detail
+     * @param  array<string, mixed>  $detail
      */
     private function calculateHash(string $actor, string $action, array $detail, string $timestamp): string
     {

@@ -1,5 +1,8 @@
 # Banca Digital BP
 
+[![Backend CI](https://github.com/pdfloresjdav/test-devsu/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/pdfloresjdav/test-devsu/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/pdfloresjdav/test-devsu/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/pdfloresjdav/test-devsu/actions/workflows/frontend-ci.yml)
+
 Diseño de arquitectura (modelo C4) e implementación progresiva del sistema de banca por internet de la entidad **BP**: consulta de histórico de movimientos, transferencias y pagos entre cuentas propias e interbancarias, con onboarding móvil biométrico y autenticación OAuth 2.0.
 
 El desarrollo avanza por fases siguiendo [`CHECKLIST.md`](CHECKLIST.md); el detalle de qué se hizo y cómo se verificó en cada fase queda en [`WORKLOG.md`](WORKLOG.md); las reglas de trabajo (incluida la obligación de mantener esta sección de instalación al día) están en [`CLAUDE.md`](CLAUDE.md).
@@ -334,6 +337,13 @@ Cada contenedor corre sus migraciones y sus comandos de provisión idempotentes 
 
 Con el stack completo arriba, el criterio de aceptación de esta fase (login → ver movimientos → completar una transferencia → verlo reflejado en auditoría/notificaciones) se verificó de punta a punta contra los contenedores reales — incluido un login real (Authorization Code + PKCE) contra `mock-oidc` sin necesitar un navegador, ver [`WORKLOG.md`](WORKLOG.md) para el detalle completo de cómo.
 
+## Integración continua (Fase 13)
+
+Dos workflows de GitHub Actions corren en cada `push`/`pull_request` a `main` (badges arriba, definiciones en `.github/workflows/`):
+
+- **`backend-ci.yml`** — un job por paquete backend (`packages/bp-common` + los 7 `services/*`): `composer install` desde el `composer.lock` commiteado, lint con Laravel Pint (`--test`, sin auto-fix) y la suite de tests de cada uno. Los 4 servicios que necesitan infraestructura real (`svc-movements`, `svc-transfers`, `svc-audit`, `svc-notifications`, más `bff-mobile` por publicar eventos de onboarding) levantan MySQL/Redis/LocalStack como *service containers* de GitHub Actions — mismo criterio que en local: nunca mocks del SDK de AWS. Cada job provisiona su propia infraestructura de forma idempotente antes de testear (tabla DynamoDB, bus de EventBridge, colas SQS) igual que documentan las secciones de cada servicio más arriba.
+- **`frontend-ci.yml`** — un job para `frontend-web` (lint con `oxlint`, `format:check` con Prettier, `tsc -b && vite build`, tests con Vitest) y otro para `frontend-mobile` (lint con `eslint-config-expo`, `format:check`, `tsc --noEmit`, tests con Jest). Ninguno de los dos necesita infraestructura real: ambas suites usan mocks/fakes para las llamadas a los BFFs.
+
 ## Stack propuesto
 
 - **Frontend:** React + TypeScript (SPA) y React Native + TypeScript (app móvil).
@@ -353,11 +363,12 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fases 0 a 12 completas:
+- Desarrollo: Fases 0 a 13 completas:
   - 0-1: entorno local + `packages/bp-common`.
   - 2-6: los 5 microservicios de negocio/workers (Datos Básicos, Movimientos, Transferencias, Auditoría, Notificaciones).
   - 7-8: los 2 BFFs (Web y Móvil, con onboarding biométrico).
   - 9-10: los 2 frontends (SPA React y app React Native/Expo).
   - 11: orquestación end-to-end local con Docker (`make dev`, los 11 contenedores del stack completo).
   - 12: traducción completa del código a inglés (clases, rutas, campos de contrato, tests, comentarios) en los 7 microservicios backend, los 2 BFFs y los 2 frontends — verificado servicio por servicio y de punta a punta contra el stack real.
-  - Queda: 13 (pruebas automatizadas y CI) y 14 (IaC para AWS). Ver [`CHECKLIST.md`](CHECKLIST.md) para el detalle ítem por ítem y [`WORKLOG.md`](WORKLOG.md) para cómo se verificó cada fase.
+  - 13: CI en GitHub Actions (lint + tests) para los 8 paquetes backend y los 2 frontends, con badges de estado en este README.
+  - Queda: 14 (IaC para AWS). Ver [`CHECKLIST.md`](CHECKLIST.md) para el detalle ítem por ítem y [`WORKLOG.md`](WORKLOG.md) para cómo se verificó cada fase.

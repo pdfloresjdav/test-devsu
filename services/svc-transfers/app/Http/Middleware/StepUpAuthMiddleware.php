@@ -17,9 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class StepUpAuthMiddleware
 {
-    public function __construct(private readonly float $threshold)
-    {
-    }
+    public function __construct(private readonly float $threshold) {}
 
     public function handle(Request $request, Closure $next): Response
     {

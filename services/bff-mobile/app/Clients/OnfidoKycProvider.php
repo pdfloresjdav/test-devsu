@@ -18,13 +18,12 @@ class OnfidoKycProvider implements KycProvider
         private readonly ClientInterface $httpClient,
         private readonly string $baseUrl,
         private readonly string $apiKey,
-    ) {
-    }
+    ) {}
 
     public function verify(string $identityDocument, string $selfie): array
     {
         try {
-            $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/') . '/verifications', [
+            $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/').'/verifications', [
                 'headers' => ['Authorization' => "Token token={$this->apiKey}"],
                 'json' => ['identity_document' => $identityDocument, 'selfie' => $selfie],
             ]);

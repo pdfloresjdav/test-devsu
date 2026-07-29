@@ -15,9 +15,7 @@ use Illuminate\Support\Facades\Log;
  */
 class LogNotificationChannel implements NotificationChannel
 {
-    public function __construct(private readonly string $channel)
-    {
-    }
+    public function __construct(private readonly string $channel) {}
 
     public function send(string $recipient, string $subject, string $body): void
     {

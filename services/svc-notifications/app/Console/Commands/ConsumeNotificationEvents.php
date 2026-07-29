@@ -40,7 +40,7 @@ class ConsumeNotificationEvents extends Command
     }
 
     /**
-     * @param array<string, mixed> $message
+     * @param  array<string, mixed>  $message
      */
     private function processMessage(SqsClient $sqs, string $queueUrl, array $message, NotificationEventProcessor $processor): void
     {

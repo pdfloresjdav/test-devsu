@@ -38,10 +38,9 @@ class CircuitBreakerInterbankClientTest extends TestCase
 
     private function alwaysFailingInterbankClient(array &$calls): InterbankClient
     {
-        return new class($calls) implements InterbankClient {
-            public function __construct(private array &$calls)
-            {
-            }
+        return new class($calls) implements InterbankClient
+        {
+            public function __construct(private array &$calls) {}
 
             public function execute(string $destinationAccount, float $amount): array
             {

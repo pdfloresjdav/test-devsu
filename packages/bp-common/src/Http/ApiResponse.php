@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 class ApiResponse
 {
     /**
-     * @param array<string, mixed> $meta
+     * @param  array<string, mixed>  $meta
      */
     public static function success(mixed $data, array $meta = [], int $status = 200): JsonResponse
     {
@@ -22,7 +22,7 @@ class ApiResponse
     }
 
     /**
-     * @param array<int, array<string, mixed>> $errors
+     * @param  array<int, array<string, mixed>>  $errors
      */
     public static function error(string $message, string $code = 'error', array $errors = [], int $status = 400): JsonResponse
     {

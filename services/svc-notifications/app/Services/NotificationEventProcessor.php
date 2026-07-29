@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Contracts\DeliveryTracker;
 use App\Contracts\NotificationDeliveryException;
 use RuntimeException;
-use Throwable;
 
 /**
  * Translates a domain event into one or more notifications: decides the
@@ -21,11 +20,10 @@ class NotificationEventProcessor
         private readonly TemplateEngine $templates,
         private readonly NotificationChannelFactory $channels,
         private readonly DeliveryTracker $tracker,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $eventBridgeEvent
+     * @param  array<string, mixed>  $eventBridgeEvent
      */
     public function process(array $eventBridgeEvent): void
     {

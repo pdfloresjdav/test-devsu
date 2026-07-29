@@ -22,7 +22,7 @@ class ConsumeNotificationEventsCommandTest extends TestCase
     {
         Log::spy();
 
-        $actor = 'actor-e2e-' . Str::uuid();
+        $actor = 'actor-e2e-'.Str::uuid();
 
         $this->app->make(EventPublisherInterface::class)->publish('TransferCompleted', [
             'transfer_id' => (string) Str::uuid(),

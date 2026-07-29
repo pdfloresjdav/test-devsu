@@ -4,6 +4,4 @@ namespace App\Contracts;
 
 use RuntimeException;
 
-class InterbankException extends RuntimeException
-{
-}
+class InterbankException extends RuntimeException {}

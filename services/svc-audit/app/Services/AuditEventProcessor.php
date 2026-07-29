@@ -15,11 +15,10 @@ class AuditEventProcessor
     public function __construct(
         private readonly AuditRepository $repository,
         private readonly WormArchiver $archiver,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $eventBridgeEvent Full event as delivered by EventBridge/SQS.
+     * @param  array<string, mixed>  $eventBridgeEvent  Full event as delivered by EventBridge/SQS.
      */
     public function process(array $eventBridgeEvent): void
     {

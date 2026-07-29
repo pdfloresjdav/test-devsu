@@ -75,7 +75,7 @@ class JwtValidator
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function assertIssuerMatches(array $claims): void
     {
@@ -88,7 +88,7 @@ class JwtValidator
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function assertAudienceMatches(array $claims): void
     {

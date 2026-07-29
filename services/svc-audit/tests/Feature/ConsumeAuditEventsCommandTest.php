@@ -19,7 +19,7 @@ class ConsumeAuditEventsCommandTest extends TestCase
 {
     public function test_a_published_event_ends_up_persisted_in_dynamodb(): void
     {
-        $actor = 'actor-e2e-' . Str::uuid();
+        $actor = 'actor-e2e-'.Str::uuid();
 
         $this->app->make(EventPublisherInterface::class)->publish('MovementRegistered', [
             'movement_id' => (string) Str::uuid(),

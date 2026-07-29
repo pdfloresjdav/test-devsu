@@ -17,12 +17,12 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(ClientInterface::class, fn () => new Client());
+        $this->app->singleton(ClientInterface::class, fn () => new Client);
 
         $this->app->singleton(InterbankClient::class, function ($app) {
             $real = config('services.interbank.driver') === 'http'
                 ? new HttpInterbankClient($app->make(ClientInterface::class), config('services.interbank.base_url'))
-                : new FakeInterbankClient();
+                : new FakeInterbankClient;
 
             return new CircuitBreakerInterbankClient(
                 $real,

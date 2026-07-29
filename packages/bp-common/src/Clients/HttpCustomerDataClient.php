@@ -13,7 +13,7 @@ class HttpCustomerDataClient extends HttpUpstreamClient implements CustomerDataC
 
     public function getCustomer(string $customerId, string $bearerToken): array
     {
-        $response = $this->request('GET', rtrim($this->baseUrl, '/') . "/customers/{$customerId}", [
+        $response = $this->request('GET', rtrim($this->baseUrl, '/')."/customers/{$customerId}", [
             'headers' => $this->authHeader($bearerToken),
         ]);
 

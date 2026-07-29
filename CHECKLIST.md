@@ -218,9 +218,9 @@
 
 ## Fase 13 — Pruebas automatizadas y CI
 
-- [ ] 13.1 GitHub Actions: lint + test por cada servicio backend
-- [ ] 13.2 GitHub Actions: lint + test para frontend-web y frontend-mobile
-- [ ] 13.3 Badge de estado en el README
+- [x] 13.1 GitHub Actions (`.github/workflows/backend-ci.yml`): un job por paquete backend (`packages/bp-common` + los 7 `services/*`) con `composer install` desde el lock commiteado, Laravel Pint (`--test`) y su suite de tests. Los jobs de `svc-movements`/`svc-transfers`/`svc-audit`/`svc-notifications`/`bff-mobile` levantan MySQL/Redis/LocalStack reales como *service containers* (nunca mocks del SDK de AWS, mismo criterio que en local) y provisionan su propia infraestructura de forma idempotente (tabla DynamoDB, bus de EventBridge compartido, colas SQS) antes de testear. Se agregó `laravel/pint` a `packages/bp-common` (nunca lo había tenido, a diferencia de los 7 servicios) y se corrió una vez sobre los 8 paquetes para dejarlos Pint-clean antes de habilitar el lint en modo `--test` (que no autocorrige, solo falla).
+- [x] 13.2 GitHub Actions (`.github/workflows/frontend-ci.yml`): job `frontend-web` (`oxlint`, `format:check`, `tsc -b && vite build`, Vitest) y job `frontend-mobile` (`eslint-config-expo`, `format:check`, `tsc --noEmit`, Jest). Ninguno necesita infraestructura real (ambas suites mockean las llamadas a los BFFs).
+- [x] 13.3 Badges de estado (`Backend CI` y `Frontend CI`) agregados al inicio del README, más una sección nueva "Integración continua (Fase 13)" explicando qué hace cada workflow.
 
 ---
 

@@ -28,8 +28,7 @@ class OnboardingService
         private readonly KycProvider $kyc,
         private readonly IdentityProviderClient $identity,
         private readonly EventPublisherInterface $events,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{user_id: string, status: string}

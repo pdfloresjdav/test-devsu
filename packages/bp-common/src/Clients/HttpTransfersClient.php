@@ -13,7 +13,7 @@ class HttpTransfersClient extends HttpUpstreamClient implements TransfersClient
 
     public function create(array $payload, string $idempotencyKey, string $bearerToken): array
     {
-        $response = $this->request('POST', rtrim($this->baseUrl, '/') . '/transfers', [
+        $response = $this->request('POST', rtrim($this->baseUrl, '/').'/transfers', [
             'headers' => $this->authHeader($bearerToken) + ['Idempotency-Key' => $idempotencyKey],
             'json' => $payload,
         ]);

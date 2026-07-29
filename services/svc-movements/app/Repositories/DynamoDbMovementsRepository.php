@@ -23,8 +23,7 @@ class DynamoDbMovementsRepository implements MovementsRepository
         private readonly DynamoDbClient $client,
         private readonly Marshaler $marshaler,
         private readonly string $table,
-    ) {
-    }
+    ) {}
 
     public function list(string $accountId, int $limit = 20): array
     {
@@ -70,8 +69,7 @@ class DynamoDbMovementsRepository implements MovementsRepository
     }
 
     /**
-     * @param array<string, mixed> $item
-     *
+     * @param  array<string, mixed>  $item
      * @return array<string, mixed>
      */
     private function unmarshalMovement(array $item): array

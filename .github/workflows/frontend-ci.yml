@@ -1,0 +1,75 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  frontend-web:
+    name: frontend-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend-web
+        run: npm ci
+
+      - name: Lint (oxlint)
+        working-directory: frontend-web
+        run: npm run lint
+
+      - name: Format check (Prettier)
+        working-directory: frontend-web
+        run: npm run format:check
+
+      - name: Type-check + build (tsc -b && vite build)
+        working-directory: frontend-web
+        run: npm run build
+
+      - name: Tests (Vitest)
+        working-directory: frontend-web
+        run: npm run test
+
+  frontend-mobile:
+    name: frontend-mobile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend-mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend-mobile
+        run: npm ci
+
+      - name: Lint (eslint-config-expo)
+        working-directory: frontend-mobile
+        run: npm run lint
+
+      - name: Format check (Prettier)
+        working-directory: frontend-mobile
+        run: npm run format:check
+
+      - name: Type-check
+        working-directory: frontend-mobile
+        run: npx tsc --noEmit
+
+      - name: Tests (Jest + React Native Testing Library)
+        working-directory: frontend-mobile
+        run: npm run test

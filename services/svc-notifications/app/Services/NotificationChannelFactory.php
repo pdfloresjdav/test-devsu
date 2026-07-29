@@ -18,9 +18,7 @@ use InvalidArgumentException;
  */
 class NotificationChannelFactory
 {
-    public function __construct(private readonly Container $app)
-    {
-    }
+    public function __construct(private readonly Container $app) {}
 
     public function make(string $channel): NotificationChannel
     {

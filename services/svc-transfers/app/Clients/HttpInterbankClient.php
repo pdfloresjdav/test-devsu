@@ -17,13 +17,12 @@ class HttpInterbankClient implements InterbankClient
     public function __construct(
         private readonly ClientInterface $httpClient,
         private readonly string $baseUrl,
-    ) {
-    }
+    ) {}
 
     public function execute(string $destinationAccount, float $amount): array
     {
         try {
-            $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/') . '/transfer', [
+            $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/').'/transfer', [
                 'json' => ['destination_account' => $destinationAccount, 'amount' => $amount],
             ]);
         } catch (Throwable $e) {

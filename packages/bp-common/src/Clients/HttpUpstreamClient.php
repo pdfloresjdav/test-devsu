@@ -17,12 +17,10 @@ use Throwable;
  */
 abstract class HttpUpstreamClient
 {
-    public function __construct(protected readonly ClientInterface $httpClient)
-    {
-    }
+    public function __construct(protected readonly ClientInterface $httpClient) {}
 
     /**
-     * @param array<string, mixed> $options
+     * @param  array<string, mixed>  $options
      */
     protected function request(string $method, string $uri, array $options = []): ResponseInterface
     {

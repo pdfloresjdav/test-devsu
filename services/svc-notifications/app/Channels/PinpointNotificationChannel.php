@@ -18,8 +18,7 @@ class PinpointNotificationChannel implements NotificationChannel
         private readonly PinpointClient $client,
         private readonly string $applicationId,
         private readonly string $channelType,
-    ) {
-    }
+    ) {}
 
     public function send(string $recipient, string $subject, string $body): void
     {

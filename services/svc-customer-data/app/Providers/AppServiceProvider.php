@@ -16,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(ClientInterface::class, fn () => new Client());
+        $this->app->singleton(ClientInterface::class, fn () => new Client);
 
         $this->app->bind(CoreBankingClient::class, function ($app) {
             if (config('services.core_banking.driver') === 'http') {
@@ -26,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
                 );
             }
 
-            return new FakeCoreBankingClient();
+            return new FakeCoreBankingClient;
         });
 
         $this->app->bind(CustomerProfileClient::class, function ($app) {
@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
                 );
             }
 
-            return new FakeCustomerProfileClient();
+            return new FakeCustomerProfileClient;
         });
     }
 

@@ -18,8 +18,7 @@ class SesNotificationChannel implements NotificationChannel
     public function __construct(
         private readonly SesClient $client,
         private readonly string $fromAddress,
-    ) {
-    }
+    ) {}
 
     public function send(string $recipient, string $subject, string $body): void
     {

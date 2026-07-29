@@ -19,20 +19,19 @@ class Auth0IdentityProviderClient implements IdentityProviderClient
         private readonly ClientInterface $httpClient,
         private readonly string $managementApiUrl,
         private readonly string $managementToken,
-    ) {
-    }
+    ) {}
 
     public function createUser(string $customerId, string $name, string $email): array
     {
         try {
-            $response = $this->httpClient->request('POST', rtrim($this->managementApiUrl, '/') . '/api/v2/users', [
+            $response = $this->httpClient->request('POST', rtrim($this->managementApiUrl, '/').'/api/v2/users', [
                 'headers' => ['Authorization' => "Bearer {$this->managementToken}"],
                 'json' => [
                     'connection' => 'Username-Password-Authentication',
                     'email' => $email,
                     'name' => $name,
                     'app_metadata' => ['customer_id' => $customerId],
-                    'password' => bin2hex(random_bytes(16)) . 'Aa1!', // replaced once the customer registers their credential
+                    'password' => bin2hex(random_bytes(16)).'Aa1!', // replaced once the customer registers their credential
                 ],
             ]);
         } catch (Throwable $e) {

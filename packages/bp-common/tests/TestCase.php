@@ -13,6 +13,7 @@ abstract class TestCase extends OrchestraTestCase
     protected RsaKeyPair $keyPair;
 
     protected const ISSUER = 'http://localhost:4011';
+
     protected const AUDIENCE = 'bp-web';
 
     protected function getPackageProviders($app): array
@@ -31,7 +32,7 @@ abstract class TestCase extends OrchestraTestCase
     {
         parent::setUp();
 
-        $this->keyPair = new RsaKeyPair();
+        $this->keyPair = new RsaKeyPair;
 
         $this->app->singleton(JwksProviderInterface::class, fn () => new FakeJwksProvider($this->keyPair->toJwks()));
     }

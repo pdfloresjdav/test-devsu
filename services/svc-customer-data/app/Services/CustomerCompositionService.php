@@ -16,8 +16,7 @@ class CustomerCompositionService
     public function __construct(
         private readonly CoreBankingClient $coreBanking,
         private readonly CustomerProfileClient $customerProfile,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<string, mixed>

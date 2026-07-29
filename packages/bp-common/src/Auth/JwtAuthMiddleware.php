@@ -18,8 +18,7 @@ class JwtAuthMiddleware
         private readonly JwtValidator $jwtValidator,
         private readonly DpopValidator $dpopValidator,
         private readonly bool $dpopEnforced,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -59,7 +58,7 @@ class JwtAuthMiddleware
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function validateDpop(Request $request, array $claims): ?Response
     {

@@ -18,12 +18,11 @@ class DiscoveryJwksProvider implements JwksProviderInterface
         private readonly ClientInterface $httpClient,
         private readonly JwksCacheInterface $cache,
         private readonly int $cacheTtlSeconds = 3600,
-    ) {
-    }
+    ) {}
 
     public function getJwks(string $issuer): array
     {
-        $cacheKey = 'bp-common:jwks:' . md5($issuer);
+        $cacheKey = 'bp-common:jwks:'.md5($issuer);
 
         $cached = $this->cache->get($cacheKey);
         if ($cached !== null) {
@@ -44,7 +43,7 @@ class DiscoveryJwksProvider implements JwksProviderInterface
 
     private function resolveJwksUri(string $issuer): string
     {
-        $discoveryUrl = rtrim($issuer, '/') . '/.well-known/openid-configuration';
+        $discoveryUrl = rtrim($issuer, '/').'/.well-known/openid-configuration';
         $discovery = $this->fetchJson($discoveryUrl);
 
         if (! isset($discovery['jwks_uri']) || ! is_string($discovery['jwks_uri'])) {

@@ -10,11 +10,15 @@ class Transfer extends Model
     use HasUuids;
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_FAILED = 'failed';
 
     protected $primaryKey = 'transfer_id';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

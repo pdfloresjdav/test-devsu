@@ -4,6 +4,4 @@ namespace App\Contracts;
 
 use RuntimeException;
 
-class CustomerNotFoundException extends RuntimeException
-{
-}
+class CustomerNotFoundException extends RuntimeException {}

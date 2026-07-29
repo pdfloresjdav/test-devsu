@@ -2,6 +2,10 @@
 
 namespace BP\Common;
 
+use Aws\DynamoDb\DynamoDbClient;
+use Aws\DynamoDb\Marshaler;
+use Aws\EventBridge\EventBridgeClient;
+use Aws\Sqs\SqsClient;
 use BP\Common\Auth\ArrayJwksCache;
 use BP\Common\Auth\DiscoveryJwksProvider;
 use BP\Common\Auth\DpopReplayStoreInterface;
@@ -21,10 +25,6 @@ use BP\Common\Events\EventBridgeEventPublisher;
 use BP\Common\Events\EventPublisherInterface;
 use BP\Common\Health\HealthCheckController;
 use BP\Common\Http\CorrelationIdMiddleware;
-use Aws\DynamoDb\DynamoDbClient;
-use Aws\DynamoDb\Marshaler;
-use Aws\EventBridge\EventBridgeClient;
-use Aws\Sqs\SqsClient;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use Illuminate\Contracts\Http\Kernel;
@@ -35,11 +35,11 @@ class BpCommonServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/bp-common.php', 'bp-common');
+        $this->mergeConfigFrom(__DIR__.'/../config/bp-common.php', 'bp-common');
 
-        $this->app->singleton(ClientInterface::class, fn () => new Client());
-        $this->app->singleton(JwksCacheInterface::class, fn () => new ArrayJwksCache());
-        $this->app->singleton(DpopReplayStoreInterface::class, fn () => new InMemoryDpopReplayStore());
+        $this->app->singleton(ClientInterface::class, fn () => new Client);
+        $this->app->singleton(JwksCacheInterface::class, fn () => new ArrayJwksCache);
+        $this->app->singleton(DpopReplayStoreInterface::class, fn () => new InMemoryDpopReplayStore);
 
         $this->app->singleton(JwksProviderInterface::class, fn ($app) => new DiscoveryJwksProvider(
             httpClient: $app->make(ClientInterface::class),
@@ -85,7 +85,7 @@ class BpCommonServiceProvider extends ServiceProvider
             'credentials' => $this->resolveAwsCredentials(),
         ]));
 
-        $this->app->singleton(Marshaler::class, fn () => new Marshaler());
+        $this->app->singleton(Marshaler::class, fn () => new Marshaler);
 
         $this->app->singleton(SqsClient::class, fn () => new SqsClient([
             'version' => 'latest',
@@ -138,14 +138,14 @@ class BpCommonServiceProvider extends ServiceProvider
         $router->get('/health', HealthCheckController::class)->name('bp-common.health');
 
         $this->publishes([
-            __DIR__ . '/../config/bp-common.php' => config_path('bp-common.php'),
+            __DIR__.'/../config/bp-common.php' => config_path('bp-common.php'),
         ], 'bp-common-config');
     }
 
     private function resolveIssuer(): string
     {
         return config('bp-common.oauth_mode') === 'auth0'
-            ? 'https://' . config('bp-common.auth0.domain')
+            ? 'https://'.config('bp-common.auth0.domain')
             : config('bp-common.jwt.issuer');
     }
 

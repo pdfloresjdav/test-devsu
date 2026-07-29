@@ -1,0 +1,367 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PHP_VERSION: "8.3"
+  PHP_EXTENSIONS: mbstring, dom, fileinfo, curl, pdo, pdo_sqlite, sqlite3, pdo_mysql, bcmath, zip, xml, ctype, tokenizer
+  # Credenciales dummy para el AWS SDK/CLI contra LocalStack -- nunca son reales.
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  bp-common:
+    name: packages/bp-common
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: packages/bp-common
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Lint (Pint)
+        working-directory: packages/bp-common
+        run: ./vendor/bin/pint --test
+
+      - name: Tests (PHPUnit)
+        working-directory: packages/bp-common
+        run: ./vendor/bin/phpunit
+
+  svc-customer-data:
+    name: services/svc-customer-data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: services/svc-customer-data
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare .env
+        working-directory: services/svc-customer-data
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Lint (Pint)
+        working-directory: services/svc-customer-data
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        working-directory: services/svc-customer-data
+        run: php artisan test
+
+  svc-movements:
+    name: services/svc-movements
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      localstack:
+        image: localstack/localstack:3
+        ports: ["4566:4566"]
+        env:
+          SERVICES: dynamodb,sqs,events,s3
+          DEFAULT_REGION: us-east-1
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: services/svc-movements
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare .env
+        working-directory: services/svc-movements
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Provision DynamoDB table + EventBridge bus (idempotente)
+        working-directory: services/svc-movements
+        run: |
+          php artisan movements:setup-table
+          php artisan events:setup-bus
+
+      - name: Lint (Pint)
+        working-directory: services/svc-movements
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        working-directory: services/svc-movements
+        run: php artisan test
+
+  svc-transfers:
+    name: services/svc-transfers
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: svc_transfers
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -uroot -proot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      localstack:
+        image: localstack/localstack:3
+        ports: ["4566:4566"]
+        env:
+          SERVICES: dynamodb,sqs,events,s3
+          DEFAULT_REGION: us-east-1
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: services/svc-transfers
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare .env
+        working-directory: services/svc-transfers
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run migrations
+        working-directory: services/svc-transfers
+        run: php artisan migrate --force
+
+      - name: Create shared EventBridge bus (idempotente; el comando que lo crea vive en svc-movements, no aca)
+        run: aws --endpoint-url=http://localhost:4566 events create-event-bus --name bp-domain-events || true
+
+      - name: Lint (Pint)
+        working-directory: services/svc-transfers
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        working-directory: services/svc-transfers
+        run: php artisan test
+
+  svc-audit:
+    name: services/svc-audit
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:3
+        ports: ["4566:4566"]
+        env:
+          SERVICES: dynamodb,sqs,events,s3
+          DEFAULT_REGION: us-east-1
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: services/svc-audit
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare .env
+        working-directory: services/svc-audit
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Create shared EventBridge bus (idempotente)
+        run: aws --endpoint-url=http://localhost:4566 events create-event-bus --name bp-domain-events || true
+
+      - name: Provision cola SQS + DLQ + regla + tabla DynamoDB + bucket S3 (idempotente)
+        working-directory: services/svc-audit
+        run: php artisan audit:setup-infrastructure
+
+      - name: Lint (Pint)
+        working-directory: services/svc-audit
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        working-directory: services/svc-audit
+        run: php artisan test
+
+  svc-notifications:
+    name: services/svc-notifications
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:3
+        ports: ["4566:4566"]
+        env:
+          SERVICES: dynamodb,sqs,events,s3
+          DEFAULT_REGION: us-east-1
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: services/svc-notifications
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare .env
+        working-directory: services/svc-notifications
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Create shared EventBridge bus (idempotente)
+        run: aws --endpoint-url=http://localhost:4566 events create-event-bus --name bp-domain-events || true
+
+      - name: Provision cola SQS + DLQ + regla + tabla DynamoDB (idempotente)
+        working-directory: services/svc-notifications
+        run: php artisan notifications:setup-infrastructure
+
+      - name: Lint (Pint)
+        working-directory: services/svc-notifications
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        working-directory: services/svc-notifications
+        run: php artisan test
+
+  bff-web:
+    name: services/bff-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: services/bff-web
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare .env
+        working-directory: services/bff-web
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Lint (Pint)
+        working-directory: services/bff-web
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        working-directory: services/bff-web
+        run: php artisan test
+
+  bff-mobile:
+    name: services/bff-mobile
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:3
+        ports: ["4566:4566"]
+        env:
+          SERVICES: dynamodb,sqs,events,s3
+          DEFAULT_REGION: us-east-1
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          coverage: none
+
+      - name: Composer install
+        working-directory: services/bff-mobile
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare .env
+        working-directory: services/bff-mobile
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Create shared EventBridge bus (idempotente; necesario para publicar OnboardingCompleted/Rejected)
+        run: aws --endpoint-url=http://localhost:4566 events create-event-bus --name bp-domain-events || true
+
+      - name: Lint (Pint)
+        working-directory: services/bff-mobile
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        working-directory: services/bff-mobile
+        run: php artisan test

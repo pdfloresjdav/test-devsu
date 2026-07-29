@@ -20,6 +20,7 @@ use Throwable;
 class CircuitBreakerInterbankClient implements InterbankClient
 {
     private const CACHE_KEY_FAILURES = 'circuit-breaker:interbank:failures';
+
     private const CACHE_KEY_OPENED_AT = 'circuit-breaker:interbank:opened-at';
 
     public function __construct(
@@ -28,8 +29,7 @@ class CircuitBreakerInterbankClient implements InterbankClient
         private readonly int $failureThreshold,
         private readonly int $cooldownSeconds,
         private readonly int $maxAttempts = 3,
-    ) {
-    }
+    ) {}
 
     public function execute(string $destinationAccount, float $amount): array
     {
@@ -51,8 +51,7 @@ class CircuitBreakerInterbankClient implements InterbankClient
     /**
      * @template T
      *
-     * @param callable(): T $callback
-     *
+     * @param  callable(): T  $callback
      * @return T
      */
     private function withRetry(callable $callback): mixed

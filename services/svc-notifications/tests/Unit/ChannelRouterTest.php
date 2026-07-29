@@ -9,16 +9,16 @@ class ChannelRouterTest extends TestCase
 {
     public function test_movement_registered_only_goes_through_push(): void
     {
-        $this->assertSame(['push'], (new ChannelRouter())->channelsFor('MovementRegistered'));
+        $this->assertSame(['push'], (new ChannelRouter)->channelsFor('MovementRegistered'));
     }
 
     public function test_transfer_failed_goes_through_push_and_email(): void
     {
-        $this->assertSame(['push', 'email'], (new ChannelRouter())->channelsFor('TransferFailed'));
+        $this->assertSame(['push', 'email'], (new ChannelRouter)->channelsFor('TransferFailed'));
     }
 
     public function test_an_unknown_event_uses_the_default_channel(): void
     {
-        $this->assertSame(['push'], (new ChannelRouter())->channelsFor('EventThatDoesNotExist'));
+        $this->assertSame(['push'], (new ChannelRouter)->channelsFor('EventThatDoesNotExist'));
     }
 }

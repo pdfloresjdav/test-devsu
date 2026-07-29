@@ -9,8 +9,7 @@ interface AuditRepository
      * timestamp, and event hash) -- "Audit database" decision from the
      * architecture document.
      *
-     * @param array<string, mixed> $detail
-     *
+     * @param  array<string, mixed>  $detail
      * @return array{
      *     audit_id: string,
      *     actor: string,

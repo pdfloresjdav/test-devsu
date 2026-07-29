@@ -4,6 +4,4 @@ namespace BP\Common\Auth;
 
 use RuntimeException;
 
-class DpopValidationException extends RuntimeException
-{
-}
+class DpopValidationException extends RuntimeException {}

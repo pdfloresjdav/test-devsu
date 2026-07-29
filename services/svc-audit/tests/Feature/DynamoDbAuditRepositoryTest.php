@@ -18,7 +18,7 @@ class DynamoDbAuditRepositoryTest extends TestCase
 {
     public function test_registers_an_audit_record_with_hash_and_timestamp(): void
     {
-        $actor = 'actor-' . Str::uuid();
+        $actor = 'actor-'.Str::uuid();
 
         $repository = new DynamoDbAuditRepository(
             $this->app->make(DynamoDbClient::class),

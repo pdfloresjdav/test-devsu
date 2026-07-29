@@ -14,9 +14,7 @@ class TransferController extends Controller
 {
     use HandlesUpstreamErrors;
 
-    public function __construct(private readonly TransfersClient $transfers)
-    {
-    }
+    public function __construct(private readonly TransfersClient $transfers) {}
 
     public function store(Request $request): JsonResponse
     {

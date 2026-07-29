@@ -16,8 +16,7 @@ class EventBridgeEventPublisher implements EventPublisherInterface
         private readonly EventBridgeClient $client,
         private readonly string $eventBusName,
         private readonly string $source,
-    ) {
-    }
+    ) {}
 
     public function publish(string $detailType, array $payload): void
     {

@@ -17,13 +17,12 @@ class HttpCoreBankingClient implements CoreBankingClient
     public function __construct(
         private readonly ClientInterface $httpClient,
         private readonly string $baseUrl,
-    ) {
-    }
+    ) {}
 
     public function getBasicData(string $customerId): array
     {
         try {
-            $response = $this->httpClient->request('GET', rtrim($this->baseUrl, '/') . "/customers/{$customerId}");
+            $response = $this->httpClient->request('GET', rtrim($this->baseUrl, '/')."/customers/{$customerId}");
         } catch (ClientException $e) {
             if ($e->getResponse()->getStatusCode() === 404) {
                 throw new CustomerNotFoundException("Core Banking has no record of customer [{$customerId}].", previous: $e);

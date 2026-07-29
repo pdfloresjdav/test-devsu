@@ -14,9 +14,7 @@ class DashboardController extends Controller
 {
     use HandlesUpstreamErrors;
 
-    public function __construct(private readonly DashboardService $dashboard)
-    {
-    }
+    public function __construct(private readonly DashboardService $dashboard) {}
 
     public function show(string $accountId, Request $request): JsonResponse
     {

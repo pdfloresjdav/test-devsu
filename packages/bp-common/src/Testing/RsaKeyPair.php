@@ -12,7 +12,9 @@ use Firebase\JWT\JWT;
 class RsaKeyPair
 {
     public readonly string $privateKeyPem;
+
     public readonly string $publicKeyPem;
+
     public readonly string $kid;
 
     public function __construct(string $kid = 'test-key-1')
@@ -54,7 +56,7 @@ class RsaKeyPair
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     public function sign(array $claims): string
     {

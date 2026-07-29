@@ -9,11 +9,9 @@ class FakeJwksProvider implements JwksProviderInterface
     private ?string $lastRequestedIssuer = null;
 
     /**
-     * @param array<string, mixed> $jwks
+     * @param  array<string, mixed>  $jwks
      */
-    public function __construct(private readonly array $jwks)
-    {
-    }
+    public function __construct(private readonly array $jwks) {}
 
     public function getJwks(string $issuer): array
     {

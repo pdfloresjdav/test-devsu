@@ -19,9 +19,7 @@ class RekognitionLivenessProvider implements LivenessProvider
 {
     private const SIMILARITY_THRESHOLD = 90.0;
 
-    public function __construct(private readonly RekognitionClient $client)
-    {
-    }
+    public function __construct(private readonly RekognitionClient $client) {}
 
     public function revalidate(string $referenceSelfie, string $newSelfie): array
     {

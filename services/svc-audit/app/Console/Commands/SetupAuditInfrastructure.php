@@ -6,6 +6,7 @@ use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Exception\DynamoDbException;
 use Aws\EventBridge\EventBridgeClient;
 use Aws\EventBridge\Exception\EventBridgeException;
+use Aws\Exception\AwsException;
 use Aws\S3\Exception\S3Exception;
 use Aws\S3\S3Client;
 use Aws\Sqs\SqsClient;
@@ -57,13 +58,13 @@ class SetupAuditInfrastructure extends Command
     }
 
     /**
-     * @param array<string, string> $attributes
+     * @param  array<string, string>  $attributes
      */
     private function createQueueIfNotExists(SqsClient $sqs, string $name, array $attributes = []): string
     {
         try {
             return $sqs->getQueueUrl(['QueueName' => $name])['QueueUrl'];
-        } catch (\Aws\Exception\AwsException $e) {
+        } catch (AwsException $e) {
             if ($e->getAwsErrorCode() !== 'AWS.SimpleQueueService.NonExistentQueue') {
                 throw $e;
             }

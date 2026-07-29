@@ -18,13 +18,12 @@ class HttpCustomerProfileClient implements CustomerProfileClient
     public function __construct(
         private readonly ClientInterface $httpClient,
         private readonly string $baseUrl,
-    ) {
-    }
+    ) {}
 
     public function getProfile(string $customerId): array
     {
         try {
-            $response = $this->httpClient->request('GET', rtrim($this->baseUrl, '/') . "/customers/{$customerId}/profile");
+            $response = $this->httpClient->request('GET', rtrim($this->baseUrl, '/')."/customers/{$customerId}/profile");
         } catch (ClientException $e) {
             if ($e->getResponse()->getStatusCode() === 404) {
                 throw new CustomerNotFoundException("The Complementary Customer System has no record of customer [{$customerId}].", previous: $e);

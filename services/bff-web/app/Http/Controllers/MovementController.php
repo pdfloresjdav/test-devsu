@@ -14,9 +14,7 @@ class MovementController extends Controller
 {
     use HandlesUpstreamErrors;
 
-    public function __construct(private readonly MovementsClient $movements)
-    {
-    }
+    public function __construct(private readonly MovementsClient $movements) {}
 
     public function index(string $accountId, Request $request): JsonResponse
     {

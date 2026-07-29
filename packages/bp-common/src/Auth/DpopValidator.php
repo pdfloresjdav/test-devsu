@@ -16,8 +16,7 @@ class DpopValidator
     public function __construct(
         private readonly DpopReplayStoreInterface $replayStore,
         private readonly int $iatLeewaySeconds = 60,
-    ) {
-    }
+    ) {}
 
     /**
      * @throws DpopValidationException
@@ -76,7 +75,7 @@ class DpopValidator
     }
 
     /**
-     * @param array<string, mixed> $header
+     * @param  array<string, mixed>  $header
      */
     private function assertType(array $header): void
     {
@@ -86,8 +85,7 @@ class DpopValidator
     }
 
     /**
-     * @param array<string, mixed> $header
-     *
+     * @param  array<string, mixed>  $header
      * @return array<string, mixed>
      */
     private function extractJwk(array $header): array
@@ -96,7 +94,7 @@ class DpopValidator
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function assertHttpMethodMatches(array $claims, string $httpMethod): void
     {
@@ -106,7 +104,7 @@ class DpopValidator
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function assertHttpUriMatches(array $claims, string $httpUri): void
     {
@@ -118,7 +116,7 @@ class DpopValidator
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function assertFreshIat(array $claims): void
     {
@@ -131,7 +129,7 @@ class DpopValidator
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function assertNotReplayed(array $claims): void
     {
@@ -147,7 +145,7 @@ class DpopValidator
     }
 
     /**
-     * @param array<string, mixed> $jwk
+     * @param  array<string, mixed>  $jwk
      */
     private function assertBoundToAccessToken(array $jwk, string $expectedThumbprint): void
     {
@@ -159,7 +157,7 @@ class DpopValidator
     /**
      * JWK Thumbprint per RFC 7638 (alphabetically ordered members).
      *
-     * @param array<string, mixed> $jwk
+     * @param  array<string, mixed>  $jwk
      */
     public function jwkThumbprint(array $jwk): string
     {

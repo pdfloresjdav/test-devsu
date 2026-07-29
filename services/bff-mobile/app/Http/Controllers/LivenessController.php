@@ -16,9 +16,7 @@ use Illuminate\Http\Request;
  */
 class LivenessController extends Controller
 {
-    public function __construct(private readonly LivenessProvider $liveness)
-    {
-    }
+    public function __construct(private readonly LivenessProvider $liveness) {}
 
     public function store(Request $request): JsonResponse
     {

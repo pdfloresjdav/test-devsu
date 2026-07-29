@@ -9,6 +9,7 @@ use BP\Common\Clients\UpstreamServiceException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 
@@ -53,7 +54,7 @@ class HttpUpstreamClientsTest extends TestCase
         $handlerStack = HandlerStack::create(new MockHandler([
             new Response(201, [], json_encode(['data' => ['transfer_id' => 't1']])),
         ]));
-        $handlerStack->push(\GuzzleHttp\Middleware::history($history));
+        $handlerStack->push(Middleware::history($history));
         $http = new Client(['handler' => $handlerStack]);
 
         (new HttpTransfersClient($http, 'http://svc'))->create(['amount' => 10], 'idem-1', 'token-x');

@@ -22,8 +22,7 @@ class TransferOrchestrator
     public function __construct(
         private readonly InterbankClient $interbank,
         private readonly EventPublisherInterface $events,
-    ) {
-    }
+    ) {}
 
     public function execute(
         string $sourceAccount,

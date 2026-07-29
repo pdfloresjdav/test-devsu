@@ -14,13 +14,12 @@ use Illuminate\Support\Str;
 class TemplateEngine
 {
     /**
-     * @param array<string, mixed> $detail
-     *
+     * @param  array<string, mixed>  $detail
      * @return array{subject: string, body: string}
      */
     public function render(string $action, array $detail, string $locale = 'es'): array
     {
-        $view = 'notifications.' . Str::kebab($action);
+        $view = 'notifications.'.Str::kebab($action);
 
         if (! View::exists($view)) {
             $view = 'notifications.default';

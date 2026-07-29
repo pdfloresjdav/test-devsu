@@ -21,11 +21,10 @@ class WormArchiver
     public function __construct(
         private readonly S3Client $client,
         private readonly string $bucket,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $record
+     * @param  array<string, mixed>  $record
      */
     public function archive(array $record): void
     {

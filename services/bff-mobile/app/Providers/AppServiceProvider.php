@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->app->singleton(ClientInterface::class, fn () => new Client());
+        $this->app->singleton(ClientInterface::class, fn () => new Client);
 
         $this->app->singleton(KycProvider::class, function ($app) {
             if (config('services.onboarding.kyc_driver') === 'http') {
@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
                 );
             }
 
-            return new FakeKycProvider();
+            return new FakeKycProvider;
         });
 
         $this->app->singleton(IdentityProviderClient::class, function ($app) {
@@ -46,7 +46,7 @@ class AppServiceProvider extends ServiceProvider
                 );
             }
 
-            return new FakeIdentityProviderClient();
+            return new FakeIdentityProviderClient;
         });
 
         $this->app->singleton(RekognitionClient::class, fn () => new RekognitionClient([
@@ -60,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(LivenessProvider::class, fn ($app) => config('services.onboarding.liveness_driver') === 'aws'
             ? new RekognitionLivenessProvider($app->make(RekognitionClient::class))
-            : new FakeLivenessProvider());
+            : new FakeLivenessProvider);
     }
 
     public function boot(): void

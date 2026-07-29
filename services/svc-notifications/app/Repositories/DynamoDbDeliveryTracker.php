@@ -18,8 +18,7 @@ class DynamoDbDeliveryTracker implements DeliveryTracker
         private readonly DynamoDbClient $client,
         private readonly Marshaler $marshaler,
         private readonly string $table,
-    ) {
-    }
+    ) {}
 
     public function register(string $actor, string $channel, string $action, string $status, ?string $failureReason = null): void
     {

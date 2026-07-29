@@ -11,9 +11,7 @@ use Illuminate\Http\Request;
 
 class TransferController extends Controller
 {
-    public function __construct(private readonly TransferOrchestrator $orchestrator)
-    {
-    }
+    public function __construct(private readonly TransferOrchestrator $orchestrator) {}
 
     public function store(Request $request): JsonResponse
     {

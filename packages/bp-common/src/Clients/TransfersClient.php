@@ -5,8 +5,7 @@ namespace BP\Common\Clients;
 interface TransfersClient
 {
     /**
-     * @param array<string, mixed> $payload
-     *
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      *
      * @throws UpstreamServiceException

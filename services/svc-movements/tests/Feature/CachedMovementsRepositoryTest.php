@@ -12,10 +12,9 @@ class CachedMovementsRepositoryTest extends TestCase
 {
     private function countingInnerRepository(array &$calls): MovementsRepository
     {
-        return new class($calls) implements MovementsRepository {
-            public function __construct(private array &$calls)
-            {
-            }
+        return new class($calls) implements MovementsRepository
+        {
+            public function __construct(private array &$calls) {}
 
             public function list(string $accountId, int $limit = 20): array
             {

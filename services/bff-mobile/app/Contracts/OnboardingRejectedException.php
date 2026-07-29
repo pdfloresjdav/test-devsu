@@ -4,6 +4,4 @@ namespace App\Contracts;
 
 use RuntimeException;
 
-class OnboardingRejectedException extends RuntimeException
-{
-}
+class OnboardingRejectedException extends RuntimeException {}

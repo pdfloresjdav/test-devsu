@@ -18,8 +18,7 @@ class CachedMovementsRepository implements MovementsRepository
         private readonly MovementsRepository $inner,
         private readonly CacheRepository $cache,
         private readonly int $ttlSeconds,
-    ) {
-    }
+    ) {}
 
     public function list(string $accountId, int $limit = 20): array
     {

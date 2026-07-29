@@ -20,7 +20,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        $this->keyPair = new RsaKeyPair();
+        $this->keyPair = new RsaKeyPair;
 
         $this->app->singleton(JwksProviderInterface::class, fn () => new FakeJwksProvider($this->keyPair->toJwks()));
     }

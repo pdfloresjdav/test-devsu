@@ -9,9 +9,7 @@ use Illuminate\Http\JsonResponse;
 
 class CustomerController extends Controller
 {
-    public function __construct(private readonly CustomerCompositionService $composition)
-    {
-    }
+    public function __construct(private readonly CustomerCompositionService $composition) {}
 
     public function show(string $customerId): JsonResponse
     {

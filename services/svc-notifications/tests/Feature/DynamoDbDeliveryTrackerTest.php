@@ -16,7 +16,7 @@ class DynamoDbDeliveryTrackerTest extends TestCase
 {
     public function test_records_the_outcome_of_a_successful_send(): void
     {
-        $actor = 'actor-' . Str::uuid();
+        $actor = 'actor-'.Str::uuid();
 
         $tracker = new DynamoDbDeliveryTracker(
             $this->app->make(DynamoDbClient::class),

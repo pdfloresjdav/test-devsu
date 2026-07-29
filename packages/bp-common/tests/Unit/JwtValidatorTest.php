@@ -11,11 +11,12 @@ use PHPUnit\Framework\TestCase;
 class JwtValidatorTest extends TestCase
 {
     private const ISSUER = 'http://localhost:4011';
+
     private const AUDIENCE = 'bp-web';
 
     public function test_validates_a_correctly_signed_token(): void
     {
-        $keyPair = new RsaKeyPair();
+        $keyPair = new RsaKeyPair;
         $validator = new JwtValidator(new FakeJwksProvider($keyPair->toJwks()), self::ISSUER, self::AUDIENCE);
 
         $token = $keyPair->sign([
@@ -33,7 +34,7 @@ class JwtValidatorTest extends TestCase
 
     public function test_rejects_a_token_signed_with_another_key(): void
     {
-        $keyPair = new RsaKeyPair();
+        $keyPair = new RsaKeyPair;
         $otherKey = new RsaKeyPair('other-key');
         $validator = new JwtValidator(new FakeJwksProvider($keyPair->toJwks()), self::ISSUER, self::AUDIENCE);
 
@@ -51,7 +52,7 @@ class JwtValidatorTest extends TestCase
 
     public function test_rejects_an_expired_token(): void
     {
-        $keyPair = new RsaKeyPair();
+        $keyPair = new RsaKeyPair;
         $validator = new JwtValidator(new FakeJwksProvider($keyPair->toJwks()), self::ISSUER, self::AUDIENCE);
 
         $token = $keyPair->sign([
@@ -68,7 +69,7 @@ class JwtValidatorTest extends TestCase
 
     public function test_rejects_an_issuer_different_from_the_expected_one(): void
     {
-        $keyPair = new RsaKeyPair();
+        $keyPair = new RsaKeyPair;
         $validator = new JwtValidator(new FakeJwksProvider($keyPair->toJwks()), self::ISSUER, self::AUDIENCE);
 
         $token = $keyPair->sign([
@@ -86,7 +87,7 @@ class JwtValidatorTest extends TestCase
 
     public function test_rejects_an_audience_different_from_the_expected_one(): void
     {
-        $keyPair = new RsaKeyPair();
+        $keyPair = new RsaKeyPair;
         $validator = new JwtValidator(new FakeJwksProvider($keyPair->toJwks()), self::ISSUER, self::AUDIENCE);
 
         $token = $keyPair->sign([
@@ -108,7 +109,7 @@ class JwtValidatorTest extends TestCase
         // issuer via http://mock-oidc:80, but the tokens it issues still
         // carry iss=http://localhost:4011 (what the browser saw when logging in).
         $discoveryIssuer = 'http://mock-oidc:80';
-        $keyPair = new RsaKeyPair();
+        $keyPair = new RsaKeyPair;
         $jwksProvider = new FakeJwksProvider($keyPair->toJwks());
 
         $validator = new JwtValidator($jwksProvider, self::ISSUER, self::AUDIENCE, $discoveryIssuer);
