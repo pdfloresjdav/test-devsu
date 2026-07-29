@@ -11,6 +11,12 @@ use BP\Common\Auth\JwksCacheInterface;
 use BP\Common\Auth\JwksProviderInterface;
 use BP\Common\Auth\JwtAuthMiddleware;
 use BP\Common\Auth\JwtValidator;
+use BP\Common\Clients\DatosBasicosClient;
+use BP\Common\Clients\HttpDatosBasicosClient;
+use BP\Common\Clients\HttpMovimientosClient;
+use BP\Common\Clients\HttpTransferenciasClient;
+use BP\Common\Clients\MovimientosClient;
+use BP\Common\Clients\TransferenciasClient;
 use BP\Common\Events\EventBridgeEventPublisher;
 use BP\Common\Events\EventPublisherInterface;
 use BP\Common\Health\HealthCheckController;
@@ -86,6 +92,21 @@ class BpCommonServiceProvider extends ServiceProvider
             'endpoint' => config('bp-common.sqs.endpoint') ?: null,
             'credentials' => $this->resolveAwsCredentials(),
         ]));
+
+        $this->app->singleton(DatosBasicosClient::class, fn ($app) => new HttpDatosBasicosClient(
+            $app->make(ClientInterface::class),
+            config('bp-common.internal_services.datos_basicos_url'),
+        ));
+
+        $this->app->singleton(MovimientosClient::class, fn ($app) => new HttpMovimientosClient(
+            $app->make(ClientInterface::class),
+            config('bp-common.internal_services.movimientos_url'),
+        ));
+
+        $this->app->singleton(TransferenciasClient::class, fn ($app) => new HttpTransferenciasClient(
+            $app->make(ClientInterface::class),
+            config('bp-common.internal_services.transferencias_url'),
+        ));
     }
 
     /**

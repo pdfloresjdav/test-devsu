@@ -234,7 +234,27 @@ Correr sus tests: `php artisan test` (9 tests, usando `GuzzleHttp\Handler\MockHa
 
 Construir su imagen: `docker build -f services/bff-web/Dockerfile -t bp/bff-web .` desde la raíz del repo.
 
-*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 8 en adelante.)*
+#### `services/bff-mobile` (Fase 8)
+
+Igual que BFF Web (los 3 clientes de negocio vienen de `bp-common`, compartidos entre ambos BFFs), más la orquestación de **onboarding biométrico**: verificación KYC → alta de identidad en el proveedor de identidad → publicación de `OnboardingCompleted`/`OnboardingRejected`. También expone la revalidación de liveness para operaciones sensibles.
+
+```bash
+cd services/bff-mobile
+cp .env.example .env
+composer install
+php artisan serve --port=8004
+```
+
+Endpoints:
+- `POST /onboarding` — **sin autenticación** (un cliente nuevo no tiene token todavía; el control de acceso real es la verificación KYC). Body: `{cliente_id, nombre, email, documento_identidad, selfie}`. Con `KYC_DRIVER=fake` (default), cualquier `documento_identidad` que empiece con `RECHAZA-` simula un rechazo del proveedor KYC.
+- `POST /revalidar-liveness` (requiere JWT) — `{selfie_referencia, selfie_nueva}`. Con `LIVENESS_DRIVER=fake` (default), `selfie_nueva: "RECHAZA"` simula una revalidación fallida.
+- `GET /dashboard/{cuentaId}`, `GET /cuentas/{cuentaId}/movimientos`, `POST /transferencias` — igual que en BFF Web.
+
+Correr sus tests: `php artisan test` (11 tests: onboarding aprobado/rechazado/validación/sin-token-necesario, liveness aprobada/rechazada/sin-token, y el dashboard agregado).
+
+Construir su imagen: `docker build -f services/bff-mobile/Dockerfile -t bp/bff-mobile .` desde la raíz del repo.
+
+*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 9 en adelante, ya del lado de los frontends.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
@@ -259,4 +279,4 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fase 0 (entorno local), Fase 1 (`packages/bp-common`), Fase 2 (`services/svc-datos-basicos`), Fase 3 (`services/svc-movimientos`), Fase 4 (`services/svc-transferencias`), Fase 5 (`services/svc-auditoria`), Fase 6 (`services/svc-notificaciones`) y Fase 7 (`services/bff-web`) completas. Queda la Fase 8 (BFF Móvil), 9-10 (frontends), 11-12 (orquestación/CI) y 13 (IaC). Ver `CHECKLIST.md`.
+- Desarrollo: Fases 0 a 8 completas — entorno local, `packages/bp-common`, los 5 microservicios de negocio/workers (Datos Básicos, Movimientos, Transferencias, Auditoría, Notificaciones) y los 2 BFFs (Web y Móvil, con onboarding biométrico). Queda 9-10 (frontends), 11-12 (orquestación/CI) y 13 (IaC). Ver `CHECKLIST.md`.

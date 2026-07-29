@@ -35,16 +35,8 @@ return [
         ],
     ],
 
-    'datos_basicos' => [
-        'base_url' => env('DATOS_BASICOS_BASE_URL', 'http://localhost:8001'),
-    ],
-
-    'movimientos' => [
-        'base_url' => env('MOVIMIENTOS_BASE_URL', 'http://localhost:8002'),
-    ],
-
-    'transferencias' => [
-        'base_url' => env('TRANSFERENCIAS_BASE_URL', 'http://localhost:8003'),
-    ],
+    // Las URLs de Datos Basicos/Movimientos/Transferencias ya se resuelven
+    // en bp-common.internal_services.* (packages/bp-common/config/bp-common.php)
+    // a partir de las mismas variables *_BASE_URL de este .env.
 
 ];

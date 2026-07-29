@@ -46,6 +46,8 @@
 - [x] 1.7 Tests unitarios del paquete
 - [x] 1.8 Confirmar que un servicio puede requerirlo vía path-repository en `composer.json`
 - [x] 1.9 *(agregado durante la Fase 3, por ser código genuinamente compartido)* `Events\EventPublisherInterface` + `EventBridgeEventPublisher`, y clientes compartidos `Aws\DynamoDb\DynamoDbClient` / `Aws\EventBridge\EventBridgeClient` configurados por `.env` (mismo patrón local/AWS real que el resto del paquete) — evita que cada servicio productor de eventos (Movimientos, Transferencias) o consumidor de DynamoDB (Auditoría) reimplemente esta configuración
+- [x] 1.10 *(agregado durante la Fase 7)* `Auth\JwtClaims::bearerToken(Request)` — extrae el JWT crudo del header `Authorization` para que un BFF lo reenvíe tal cual a un microservicio interno
+- [x] 1.11 *(agregado durante la Fase 8, por ser código genuinamente compartido)* `Clients\{DatosBasicosClient,MovimientosClient,TransferenciasClient}` + implementaciones HTTP + `HttpUpstreamClient` (base con manejo de errores) + `UpstreamServiceException`, y el trait `Http\HandlesUpstreamErrors` — movidos desde BFF Web al detectarse que BFF Móvil necesitaba exactamente lo mismo
 
 ---
 
@@ -131,7 +133,7 @@
 **Criterio de aceptación:** agrega datos de los 3 servicios de negocio en contratos pensados para la SPA, con tests de integración contra los servicios (o sus fakes).
 
 - [x] 7.1 Scaffold Laravel + Octane + Dockerfile
-- [x] 7.2 Clientes HTTP hacia Datos Básicos, Movimientos y Transferencias (`DatosBasicosClient`/`MovimientosClient`/`TransferenciasClient`, cada uno propaga el mismo JWT del cliente hacia el servicio interno — decisión 3.5: cada servicio valida su propio token, sin credenciales de servicio a servicio aparte)
+- [x] 7.2 Clientes HTTP hacia Datos Básicos, Movimientos y Transferencias (`DatosBasicosClient`/`MovimientosClient`/`TransferenciasClient`, cada uno propaga el mismo JWT del cliente hacia el servicio interno — decisión 3.5: cada servicio valida su propio token, sin credenciales de servicio a servicio aparte). *Actualización en la Fase 8:* se movieron a `packages/bp-common` (`BP\Common\Clients\*`) al detectarse que BFF Móvil necesitaba exactamente los mismos — este servicio se actualizó para consumir la versión compartida en vez de mantener su propia copia
 - [x] 7.3 Endpoints agregados para la SPA: `GET /dashboard/{cuentaId}` (compone Datos Básicos + Movimientos en un solo contrato — el único endpoint que agrega de verdad), `GET /cuentas/{id}/movimientos` y `POST /transferencias` (pass-through adaptado, con envelope y manejo de errores consistentes)
 - [x] 7.4 Middleware de auth (`bp-common`) en las 3 rutas
 - [x] 7.5 Tests (9, con `GuzzleHttp\Handler\MockHandler` simulando los 3 servicios — opción explícitamente permitida por el criterio de aceptación de la fase — más una verificación manual real levantando los 4 procesos juntos)
@@ -143,13 +145,13 @@
 
 **Criterio de aceptación:** además de lo del BFF Web, orquesta el flujo de onboarding KYC de punta a punta con el proveedor fake.
 
-- [ ] 8.1 Scaffold Laravel + Octane + Dockerfile
-- [ ] 8.2 Clientes hacia los 3 servicios de negocio
-- [ ] 8.3 Cliente KYC fake tras interfaz `KycProvider` (driver fake / driver Onfido-iProov real)
-- [ ] 8.4 Endpoint de onboarding (`POST /onboarding`) que orquesta: envío a KYC → alta en Auth0/mock-oidc → registro de credencial (WebAuthn/FIDO2 o usuario+clave) → respuesta al cliente
-- [ ] 8.5 Cliente de liveness ligero tras interfaz `LivenessProvider` (driver fake / driver AWS Rekognition real), usado en el endpoint de revalidación de riesgo para operaciones sensibles (paso "step-up" del diagrama de secuencia 8.2)
-- [ ] 8.6 Tests (onboarding aprobado, rechazado, revalidación de liveness)
-- [ ] 8.7 `.env.example`
+- [x] 8.1 Scaffold Laravel + Octane + Dockerfile
+- [x] 8.2 Clientes hacia los 3 servicios de negocio — **reutilizados de `bp-common`** (`BP\Common\Clients\*`): al ser la segunda vez que se necesitaban exactamente iguales (la primera fue BFF Web, Fase 7), se movieron a `bp-common` en vez de duplicarlos; `bff-web` se actualizó retroactivamente para consumir la misma versión compartida (sus 9 tests se re-corrieron en verde)
+- [x] 8.3 Cliente KYC fake tras interfaz `KycProvider` (driver fake / driver Onfido-iProov real vía HTTP)
+- [x] 8.4 Endpoint de onboarding (`POST /onboarding`, sin `JwtAuthMiddleware` a propósito — un cliente nuevo no tiene token todavía, el control de acceso real es la verificación KYC) que orquesta: envío a KYC → alta de identidad (`IdentityProviderClient`, driver fake / Auth0 Management API real) → publica `OnboardingCompleted`/`OnboardingRejected`. *Simplificación de alcance respecto al diagrama de secuencia 8.2:* no se valida la existencia del cliente en el Core antes de crear la identidad — esa llamada requeriría que el BFF se autentique como servicio (`client_credentials`) en vez de con el JWT del usuario final, un flujo de autenticación máquina-a-máquina completo que esta fase no pedía explícitamente; queda documentado en el código (`OnboardingService`) para retomarlo si hace falta
+- [x] 8.5 Cliente de liveness ligero tras interfaz `LivenessProvider` (driver fake / driver AWS Rekognition real vía `CompareFaces`, simplificación documentada de la API completa de Face Liveness) — expuesto en `POST /revalidar-liveness`, **mediado por el BFF y sí protegido con JWT** (a diferencia del diagrama de secuencia, que muestra la app llamando a Rekognition directo — se corrigió a propósito para no distribuir credenciales de AWS en el cliente móvil)
+- [x] 8.6 Tests (11: onboarding sin token/aprobado/rechazado/validación, liveness aprobada/rechazada/sin token, dashboard agregando los 3 servicios)
+- [x] 8.7 `.env.example`
 
 ---
 

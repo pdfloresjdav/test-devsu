@@ -46,4 +46,12 @@ return [
         'endpoint' => env('AWS_SQS_ENDPOINT', env('AWS_ENDPOINT_URL')),
         'region' => env('AWS_REGION', 'us-east-1'),
     ],
+
+    // URLs de los microservicios de negocio, usadas por los clientes
+    // compartidos de BP\Common\Clients\* (BFF Web y BFF Movil).
+    'internal_services' => [
+        'datos_basicos_url' => env('DATOS_BASICOS_BASE_URL', 'http://localhost:8001'),
+        'movimientos_url' => env('MOVIMIENTOS_BASE_URL', 'http://localhost:8002'),
+        'transferencias_url' => env('TRANSFERENCIAS_BASE_URL', 'http://localhost:8003'),
+    ],
 ];

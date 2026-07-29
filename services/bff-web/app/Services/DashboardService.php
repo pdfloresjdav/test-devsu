@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Contracts\DatosBasicosClient;
-use App\Contracts\MovimientosClient;
+use BP\Common\Clients\DatosBasicosClient;
+use BP\Common\Clients\MovimientosClient;
 
 /**
  * Unico endpoint del BFF que realmente COMPONE datos de mas de un
