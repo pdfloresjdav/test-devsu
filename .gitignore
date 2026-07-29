@@ -10,6 +10,12 @@ Thumbs.db
 # Node (si se usa mermaid-cli u otras herramientas locales de renderizado)
 node_modules/
 npm-debug.log*
+# Excepcion: la convencion de empaquetado de AWS Synthetics (modulo
+# infra/terraform/modules/observability) exige que el script del canario
+# viva literalmente en una carpeta "nodejs/node_modules/" -- no son
+# dependencias instaladas, es el codigo fuente real del canario.
+!infra/terraform/modules/observability/canary/nodejs/node_modules/
+!infra/terraform/modules/observability/canary/nodejs/node_modules/*.js
 
 # PHP / Composer
 vendor/
@@ -38,6 +44,18 @@ packages/*/composer.lock
 services/*/.env
 frontend-web/.env
 frontend-mobile/.env
+
+# Terraform (infra/terraform) -- el backend de estado real (S3) todavia no
+# esta provisionado (ver infra/terraform/README.md), asi que el estado local
+# de cualquier prueba de fmt/init/validate/plan en este entorno no se commitea.
+# El lock de providers (.terraform.lock.hcl) SI se commitea (garantiza las
+# mismas versiones de provider en cualquier maquina/CI).
+infra/terraform/**/.terraform/
+infra/terraform/**/*.tfstate
+infra/terraform/**/*.tfstate.*
+infra/terraform/**/*.tfplan
+infra/terraform/**/*.auto.tfvars
+infra/terraform/**/terraform.tfvars
 
 # Archivos temporales
 *.tmp

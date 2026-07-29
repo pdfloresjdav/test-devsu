@@ -1,0 +1,109 @@
+name: Deploy
+
+# Item 14.9: build de imagenes, push a ECR y deploy a ECS Fargate por
+# ambiente. Complementa a backend-ci.yml/frontend-ci.yml (Fase 13, que
+# solo corren lint+tests) -- este workflow solo se dispara manualmente
+# (nunca automatico en cada push) porque un deploy a AWS real es una
+# accion con efectos en un ambiente compartido, no una verificacion local.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente a desplegar"
+        required: true
+        type: choice
+        options: [dev, staging, prod]
+
+permissions:
+  id-token: write # OIDC hacia AWS -- sin credenciales estaticas guardadas en secrets
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY_ALIAS: bp
+
+jobs:
+  build-and-push:
+    name: Build + push (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - svc-customer-data
+          - svc-movements
+          - svc-transfers
+          - svc-audit
+          - svc-notifications
+          - bff-web
+          - bff-mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/bp-${{ inputs.environment }}-github-actions-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login a ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build + push imagen
+        env:
+          ECR_REPOSITORY: ${{ steps.ecr-login.outputs.registry }}/bp-${{ inputs.environment }}/${{ matrix.service }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Contexto en la raiz del monorepo -- cada servicio necesita
+          # copiar packages/bp-common (dependencia local via path-repository),
+          # mismo criterio que el `docker build` documentado en cada
+          # servicio (ver README.md).
+          docker build -f services/${{ matrix.service }}/Dockerfile \
+            -t "$ECR_REPOSITORY:$IMAGE_TAG" \
+            -t "$ECR_REPOSITORY:latest" \
+            .
+          docker push "$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REPOSITORY:latest"
+
+  deploy:
+    name: Deploy (${{ matrix.service }})
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - svc-customer-data
+          - svc-movements
+          - svc-transfers
+          - svc-audit
+          - svc-notifications
+          - bff-web
+          - bff-mobile
+    steps:
+      - name: Configurar credenciales AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/bp-${{ inputs.environment }}-github-actions-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Forzar nuevo despliegue en ECS
+        run: |
+          # La nueva imagen ya quedo en ":latest" del push de arriba; un
+          # `force-new-deployment` hace que ECS levante tareas nuevas
+          # tirando de esa imagen y las reemplace de forma gradual
+          # (rolling update, sin downtime) -- el deployment circuit
+          # breaker del modulo compute revierte solo si las tareas nuevas
+          # no pasan el healthcheck.
+          aws ecs update-service \
+            --cluster "bp-${{ inputs.environment }}-cluster" \
+            --service "${{ matrix.service }}" \
+            --force-new-deployment \
+            --region "${{ env.AWS_REGION }}"
+
+      - name: Esperar a que el servicio quede estable
+        run: |
+          aws ecs wait services-stable \
+            --cluster "bp-${{ inputs.environment }}-cluster" \
+            --services "${{ matrix.service }}" \
+            --region "${{ env.AWS_REGION }}"
