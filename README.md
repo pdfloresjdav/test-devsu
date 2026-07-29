@@ -43,6 +43,13 @@ Para levantar el entorno de desarrollo en una máquina limpia (local o un servid
 
 ## Puesta en marcha (entorno limpio)
 
+Hay dos formas de levantar el proyecto, según qué se quiera hacer:
+
+- **Solo infraestructura** (`make up`, 4 contenedores: MySQL, Redis, LocalStack, mock-oidc) — para desarrollar corriendo cada microservicio a mano con `php artisan serve`/`octane:start` mientras se itera sobre su código.
+- **Todo el stack** (`make dev`, 11 contenedores: los 4 de infraestructura + los 7 servicios backend, cada uno buildeado desde su propio `Dockerfile`) — para levantar el sistema completo de punta a punta sin tocar nada a mano. Ver la sección [Orquestación completa](#orquestación-completa-fase-11) más abajo para el detalle.
+
+Para arrancar rápido con **solo infraestructura**:
+
 ```bash
 # 1. Clonar el repositorio
 git clone git@github.com:pdfloresjdav/test-devsu.git
@@ -54,7 +61,7 @@ cp .env.example .env
 # 3. Levantar la infraestructura local (MySQL, Redis, LocalStack, mock-oidc)
 make up
 
-# 4. Verificar que los 4 servicios quedaron sanos
+# 4. Verificar que los 4 contenedores de infraestructura quedaron sanos
 make ps
 ```
 
@@ -77,6 +84,8 @@ curl -s http://localhost:4566/_localstack/health   # dynamodb/sqs/events/s3 debe
 curl -s http://localhost:4011/.well-known/openid-configuration   # discovery OIDC del mock-oidc
 ```
 
+A partir de acá, cada microservicio se levanta a mano siguiendo su propia sección más abajo (`services/svc-customer-data`, etc.) — o, para levantar **los 7 de una sola vez** ya buildeados en Docker, saltar directo a `make dev` en la sección [Orquestación completa](#orquestación-completa-fase-11).
+
 Para bajar el entorno: `make down`.
 
 ### Paquete compartido `packages/bp-common`
@@ -91,12 +100,12 @@ composer install
 
 ### Microservicios (`services/*`)
 
-#### `services/svc-datos-basicos` (Fase 2)
+#### `services/svc-customer-data` (Fase 2)
 
 Compone datos del Core Bancario y del Sistema Complementario de Cliente (patrón API Composition). Mientras esos sistemas no existan, usa clientes fake con datos fijos (clientes de prueba `1001` y `1002`).
 
 ```bash
-cd services/svc-datos-basicos
+cd services/svc-customer-data
 cp .env.example .env   # ya viene con OAUTH_MODE=local apuntando al mock-oidc
 composer install
 php artisan serve --port=8001
@@ -113,15 +122,15 @@ Para apuntar a los sistemas reales cuando existan: `CORE_BANKING_DRIVER=http` + 
 Construir su imagen (Octane + Swoole, igual que en producción) desde la **raíz del repo** (necesita `packages/bp-common` en el contexto):
 
 ```bash
-docker build -f services/svc-datos-basicos/Dockerfile -t bp/svc-datos-basicos .
+docker build -f services/svc-customer-data/Dockerfile -t bp/svc-customer-data .
 ```
 
-#### `services/svc-movimientos` (Fase 3)
+#### `services/svc-movements` (Fase 3)
 
 Histórico de movimientos con patrón **Cache-Aside** (Redis) sobre un repositorio de **DynamoDB** (LocalStack en local, AWS real en producción — mismo código), y publicación del evento `MovementRegistered` a EventBridge al registrar un movimiento nuevo.
 
 ```bash
-cd services/svc-movimientos
+cd services/svc-movements
 cp .env.example .env
 composer install
 
@@ -138,14 +147,14 @@ Endpoints (requieren `Authorization: Bearer <JWT>`):
 
 Correr sus tests: `php artisan test` (9 tests, corren contra el Redis y el LocalStack reales de `docker-compose` — no hay mocks del SDK de AWS).
 
-Construir su imagen: `docker build -f services/svc-movimientos/Dockerfile -t bp/svc-movimientos .` desde la raíz del repo.
+Construir su imagen: `docker build -f services/svc-movements/Dockerfile -t bp/svc-movements .` desde la raíz del repo.
 
-#### `services/svc-transferencias` (Fase 4)
+#### `services/svc-transfers` (Fase 4)
 
 Orquesta transferencias propias e interbancarias con patrón **Saga** (débito → llamada externa → confirmación o compensación), **Idempotency-Key** (Redis), **Circuit Breaker** con retry/backoff sobre el cliente interbancario, y **autenticación reforzada (step-up)** obligatoria para montos grandes.
 
 ```bash
-cd services/svc-transferencias
+cd services/svc-transfers
 cp .env.example .env
 composer install
 php artisan migrate   # crea las tablas en la base MySQL dedicada "svc_transfers"
@@ -161,14 +170,14 @@ Endpoint: `POST /transfers` (requiere `Authorization: Bearer <JWT>` **e** `Idemp
 
 Correr sus tests: `php artisan test` (11 tests, contra el MySQL/Redis/LocalStack reales de `docker-compose`, con cada test envuelto en una transacción que se revierte al final).
 
-Construir su imagen: `docker build -f services/svc-transferencias/Dockerfile -t bp/svc-transferencias .` desde la raíz del repo.
+Construir su imagen: `docker build -f services/svc-transfers/Dockerfile -t bp/svc-transfers .` desde la raíz del repo.
 
-#### `services/svc-auditoria` (Fase 5)
+#### `services/svc-audit` (Fase 5)
 
 Consumidor de eventos de dominio: registra en DynamoDB (con hash de integridad) toda acción publicada por otros servicios, y archiva cada registro en un bucket S3 (stand-in local del WORM Object Lock de AWS). No expone HTTP — es un worker puro.
 
 ```bash
-cd services/svc-auditoria
+cd services/svc-audit
 cp .env.example .env
 composer install
 
@@ -176,7 +185,7 @@ composer install
 php artisan audit:setup-infrastructure   # crea la cola SQS + su DLQ, la regla de EventBridge, la tabla DynamoDB y el bucket S3
 ```
 
-> Ojo: a diferencia de la tabla DynamoDB (que persiste entre reinicios de `docker-compose`), el bus/regla de EventBridge de LocalStack **no sobrevive** un reinicio del contenedor — si `make down && make up` se corrió después de provisionar, hay que volver a correr `audit:setup-infrastructure` (y el `events:setup-bus` de `svc-movimientos`) antes de seguir.
+> Ojo: a diferencia de la tabla DynamoDB (que persiste entre reinicios de `docker-compose`), el bus/regla de EventBridge de LocalStack **no sobrevive** un reinicio del contenedor — si `make down && make up` se corrió después de provisionar, hay que volver a correr `audit:setup-infrastructure` (y el `events:setup-bus` de `svc-movements`) antes de seguir.
 
 Correr el consumidor:
 
@@ -187,14 +196,14 @@ php artisan audit:consume --once   # procesa un solo ciclo y termina (para proba
 
 Correr sus tests: `php artisan test` (9 tests contra el DynamoDB/S3/SQS/EventBridge reales de `docker-compose`, incluyendo un test end-to-end: publica un evento real → lo consume → lo verifica persistido).
 
-Construir su imagen: `docker build -f services/svc-auditoria/Dockerfile -t bp/svc-auditoria .` desde la raíz del repo (no lleva Swoole: es un worker, no sirve HTTP).
+Construir su imagen: `docker build -f services/svc-audit/Dockerfile -t bp/svc-audit .` desde la raíz del repo (no lleva Swoole: es un worker, no sirve HTTP).
 
-#### `services/svc-notificaciones` (Fase 6)
+#### `services/svc-notifications` (Fase 6)
 
 Consumidor de eventos de dominio (mismo patrón que Auditoría, con su propia cola SQS): decide el canal según el tipo de evento (`ChannelRouter`), genera el contenido (`TemplateEngine`), lo "envía" y registra el resultado de entrega (`DeliveryTracker` en DynamoDB). No expone HTTP.
 
 ```bash
-cd services/svc-notificaciones
+cd services/svc-notifications
 cp .env.example .env
 composer install
 
@@ -210,7 +219,7 @@ Con `NOTIFICATION_DRIVER=log` (el default en `.env.example`), cada notificación
 
 Correr sus tests: `php artisan test` (13 tests, incluyendo un end-to-end real contra el SQS/EventBridge/DynamoDB de `docker-compose`).
 
-Construir su imagen: `docker build -f services/svc-notificaciones/Dockerfile -t bp/svc-notificaciones .` desde la raíz del repo (worker puro, sin Swoole).
+Construir su imagen: `docker build -f services/svc-notifications/Dockerfile -t bp/svc-notifications .` desde la raíz del repo (worker puro, sin Swoole).
 
 #### `services/bff-web` (Fase 7)
 
@@ -223,7 +232,7 @@ composer install
 php artisan serve --port=8010
 ```
 
-Para probarlo de punta a punta hace falta tener corriendo `svc-datos-basicos` (puerto 8001), `svc-movimientos` (8002) y `svc-transferencias` (8003) — ver sus propias secciones de este README.
+Para probarlo de punta a punta hace falta tener corriendo `svc-customer-data` (puerto 8001), `svc-movements` (8002) y `svc-transfers` (8003) — ver sus propias secciones de este README.
 
 Endpoints (todos requieren `Authorization: Bearer <JWT>`):
 - `GET /dashboard/{accountId}` — compone Datos Básicos + Movimientos en un solo contrato (el único endpoint que agrega de verdad; los otros dos son pass-through adaptado).
@@ -319,7 +328,9 @@ make dev-logs  # logs en vivo de todo el stack
 make dev-down  # apaga todo (los datos de MySQL/LocalStack persisten en sus volúmenes)
 ```
 
-Cada contenedor corre sus migraciones y sus comandos de provisión idempotentes (tabla DynamoDB, bus/reglas de EventBridge, colas SQS) automáticamente al arrancar — no hace falta ningún paso manual aparte de `make dev`. Puertos expuestos: `svc-datos-basicos` 8001, `svc-movimientos` 8002, `svc-transferencias` 8003, `bff-mobile` 8004, `bff-web` 8010 (`svc-auditoria`/`svc-notificaciones` son workers puros, sin puerto HTTP).
+Cada contenedor corre sus migraciones y sus comandos de provisión idempotentes (tabla DynamoDB, bus/reglas de EventBridge, colas SQS) automáticamente al arrancar — no hace falta ningún paso manual aparte de `make dev`. Puertos expuestos: `svc-customer-data` 8001, `svc-movements` 8002, `svc-transfers` 8003, `bff-mobile` 8004, `bff-web` 8010 (`svc-audit`/`svc-notifications` son workers puros, sin puerto HTTP).
+
+> El nombre de carpeta, la clave de servicio de Compose y el `container_name` de estos 5 servicios ya coinciden en inglés (Fase 12): carpeta `services/svc-transfers` = clave de servicio `svc-transfers:` = contenedor `bp-svc-transfers` (y así para `svc-customer-data`, `svc-movements`, `svc-audit`, `svc-notifications`). Antes de la Fase 12 estaban en español y hasta hace poco solo el `container_name` se había traducido — ver `WORKLOG.md` para el detalle de ambos cambios.
 
 Con el stack completo arriba, el criterio de aceptación de esta fase (login → ver movimientos → completar una transferencia → verlo reflejado en auditoría/notificaciones) se verificó de punta a punta contra los contenedores reales — incluido un login real (Authorization Code + PKCE) contra `mock-oidc` sin necesitar un navegador, ver [`WORKLOG.md`](WORKLOG.md) para el detalle completo de cómo.
 
@@ -342,4 +353,11 @@ Para regenerar el PDF tras editar un diagrama: renderizar el `.mmd` correspondie
 ## Estado
 
 - Documento de arquitectura v1.1 — completo.
-- Desarrollo: Fases 0 a 8 completas — entorno local, `packages/bp-common`, los 5 microservicios de negocio/workers (Datos Básicos, Movimientos, Transferencias, Auditoría, Notificaciones) y los 2 BFFs (Web y Móvil, con onboarding biométrico). Queda 9-10 (frontends), 11-12 (orquestación/CI) y 13 (IaC). Ver `CHECKLIST.md`.
+- Desarrollo: Fases 0 a 12 completas:
+  - 0-1: entorno local + `packages/bp-common`.
+  - 2-6: los 5 microservicios de negocio/workers (Datos Básicos, Movimientos, Transferencias, Auditoría, Notificaciones).
+  - 7-8: los 2 BFFs (Web y Móvil, con onboarding biométrico).
+  - 9-10: los 2 frontends (SPA React y app React Native/Expo).
+  - 11: orquestación end-to-end local con Docker (`make dev`, los 11 contenedores del stack completo).
+  - 12: traducción completa del código a inglés (clases, rutas, campos de contrato, tests, comentarios) en los 7 microservicios backend, los 2 BFFs y los 2 frontends — verificado servicio por servicio y de punta a punta contra el stack real.
+  - Queda: 13 (pruebas automatizadas y CI) y 14 (IaC para AWS). Ver [`CHECKLIST.md`](CHECKLIST.md) para el detalle ítem por ítem y [`WORKLOG.md`](WORKLOG.md) para cómo se verificó cada fase.

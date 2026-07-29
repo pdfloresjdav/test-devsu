@@ -1,6 +1,6 @@
 # Built with the context at the monorepo ROOT, to be able to copy
 # packages/bp-common (local dependency via path-repository):
-#   docker build -f services/svc-transferencias/Dockerfile -t bp/svc-transferencias .
+#   docker build -f services/svc-transfers/Dockerfile -t bp/svc-transfers .
 
 FROM php:8.3-cli AS base
 
@@ -16,9 +16,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /app
 
 COPY packages/bp-common packages/bp-common
-COPY services/svc-transferencias services/svc-transferencias
+COPY services/svc-transfers services/svc-transfers
 
-WORKDIR /app/services/svc-transferencias
+WORKDIR /app/services/svc-transfers
 
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
     && composer dump-autoload --optimize

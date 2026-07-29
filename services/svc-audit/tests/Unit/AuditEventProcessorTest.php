@@ -34,7 +34,7 @@ class AuditEventProcessorTest extends TestCase
 
         $processor->process([
             'detail-type' => 'MovementRegistered',
-            'source' => 'bp.svc-movimientos',
+            'source' => 'bp.svc-movements',
             'detail' => ['account_id' => 'X', 'actor' => 'user-abc'],
         ]);
     }

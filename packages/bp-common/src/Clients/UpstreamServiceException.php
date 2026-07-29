@@ -11,7 +11,7 @@ use Throwable;
  * to the client (instead of always returning a generic 502).
  *
  * Also preserves the internal service's business `errorCode` (e.g.
- * "step_up_required" from svc-transferencias) when the error body carries
+ * "step_up_required" from svc-transfers) when the error body carries
  * one -- without this, HandlesUpstreamErrors flattened it to a generic
  * "upstream_error" and the only thing left for the frontend to
  * distinguish a step-up rejection from any other 403/422 error was the

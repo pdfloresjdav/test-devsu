@@ -132,10 +132,10 @@ services:
   # comentario en JwtValidator.php sobre por que discovery e issuer son dos
   # cosas distintas. Los contenedores no tienen archivo .env (no se copia
   # al build): dependen enteramente de las variables de entorno de aca.
-  svc-datos-basicos:
+  svc-customer-data:
     build:
       context: .
-      dockerfile: services/svc-datos-basicos/Dockerfile
+      dockerfile: services/svc-customer-data/Dockerfile
     container_name: bp-svc-customer-data
     restart: unless-stopped
     profiles: ["services"]
@@ -154,10 +154,10 @@ services:
       retries: 20
       start_period: 20s
 
-  svc-movimientos:
+  svc-movements:
     build:
       context: .
-      dockerfile: services/svc-movimientos/Dockerfile
+      dockerfile: services/svc-movements/Dockerfile
     container_name: bp-svc-movements
     restart: unless-stopped
     profiles: ["services"]
@@ -175,7 +175,7 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       EVENT_BUS_NAME: bp-domain-events
-      EVENT_SOURCE: bp.svc-movimientos
+      EVENT_SOURCE: bp.svc-movements
       MOVEMENTS_TABLE: movements
       MOVEMENTS_CACHE_STORE: redis
       MOVEMENTS_CACHE_TTL_SECONDS: "60"
@@ -193,10 +193,10 @@ services:
       retries: 20
       start_period: 20s
 
-  svc-transferencias:
+  svc-transfers:
     build:
       context: .
-      dockerfile: services/svc-transferencias/Dockerfile
+      dockerfile: services/svc-transfers/Dockerfile
     container_name: bp-svc-transfers
     restart: unless-stopped
     profiles: ["services"]
@@ -220,7 +220,7 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       EVENT_BUS_NAME: bp-domain-events
-      EVENT_SOURCE: bp.svc-transferencias
+      EVENT_SOURCE: bp.svc-transfers
       IDEMPOTENCY_CACHE_TTL_SECONDS: "86400"
       STEP_UP_THRESHOLD: "1000"
       INTERBANK_CIRCUIT_FAILURE_THRESHOLD: "3"
@@ -242,10 +242,10 @@ services:
       retries: 20
       start_period: 20s
 
-  svc-auditoria:
+  svc-audit:
     build:
       context: .
-      dockerfile: services/svc-auditoria/Dockerfile
+      dockerfile: services/svc-audit/Dockerfile
     container_name: bp-svc-audit
     restart: unless-stopped
     profiles: ["services"]
@@ -256,7 +256,7 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       EVENT_BUS_NAME: bp-domain-events
-      EVENT_SOURCE: bp.svc-auditoria
+      EVENT_SOURCE: bp.svc-audit
       AUDIT_TABLE: audit
       AUDIT_BUCKET: bp-audit-worm
       AUDIT_QUEUE_NAME: audit-events-queue
@@ -267,10 +267,10 @@ services:
       localstack:
         condition: service_healthy
 
-  svc-notificaciones:
+  svc-notifications:
     build:
       context: .
-      dockerfile: services/svc-notificaciones/Dockerfile
+      dockerfile: services/svc-notifications/Dockerfile
     container_name: bp-svc-notifications
     restart: unless-stopped
     profiles: ["services"]
@@ -281,7 +281,7 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       EVENT_BUS_NAME: bp-domain-events
-      EVENT_SOURCE: bp.svc-notificaciones
+      EVENT_SOURCE: bp.svc-notifications
       NOTIFICATION_DRIVER: log
       NOTIFICATIONS_TABLE: notification_deliveries
       NOTIFICATIONS_QUEUE_NAME: notification-events-queue
@@ -304,17 +304,17 @@ services:
     environment:
       APP_KEY: "base64:9+0gF8yJ+cfKpOtzBSyXG2ejRxtSPMgPizU9ECbRS2g="
       OIDC_DISCOVERY_ISSUER: http://mock-oidc:80
-      CUSTOMER_DATA_BASE_URL: http://svc-datos-basicos:8000
-      MOVEMENTS_BASE_URL: http://svc-movimientos:8000
-      TRANSFERS_BASE_URL: http://svc-transferencias:8000
+      CUSTOMER_DATA_BASE_URL: http://svc-customer-data:8000
+      MOVEMENTS_BASE_URL: http://svc-movements:8000
+      TRANSFERS_BASE_URL: http://svc-transfers:8000
     depends_on:
       mock-oidc:
         condition: service_healthy
-      svc-datos-basicos:
+      svc-customer-data:
         condition: service_healthy
-      svc-movimientos:
+      svc-movements:
         condition: service_healthy
-      svc-transferencias:
+      svc-transfers:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -335,9 +335,9 @@ services:
     environment:
       APP_KEY: "base64:f/uBz+4Chaxq5zvKVF5MWrGQeul7tNj6upV/S/83ySs="
       OIDC_DISCOVERY_ISSUER: http://mock-oidc:80
-      CUSTOMER_DATA_BASE_URL: http://svc-datos-basicos:8000
-      MOVEMENTS_BASE_URL: http://svc-movimientos:8000
-      TRANSFERS_BASE_URL: http://svc-transferencias:8000
+      CUSTOMER_DATA_BASE_URL: http://svc-customer-data:8000
+      MOVEMENTS_BASE_URL: http://svc-movements:8000
+      TRANSFERS_BASE_URL: http://svc-transfers:8000
       AWS_ENDPOINT_URL: http://localstack:4566
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test
@@ -350,11 +350,11 @@ services:
     depends_on:
       mock-oidc:
         condition: service_healthy
-      svc-datos-basicos:
+      svc-customer-data:
         condition: service_healthy
-      svc-movimientos:
+      svc-movements:
         condition: service_healthy
-      svc-transferencias:
+      svc-transfers:
         condition: service_healthy
       localstack:
         condition: service_healthy

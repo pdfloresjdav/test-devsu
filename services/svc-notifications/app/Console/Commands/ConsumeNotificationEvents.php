@@ -12,7 +12,7 @@ use Throwable;
  * but with its OWN EventBridge queue/rule -- Pub/Sub with Competing
  * Consumers pattern, decision 3.13: each consumer has its own independent
  * copy of every event). See the note about Horizon/pure-worker in
- * CLAUDE.md and in svc-auditoria.
+ * CLAUDE.md and in svc-audit.
  */
 class ConsumeNotificationEvents extends Command
 {

@@ -11,13 +11,13 @@
 
 ## Índice
 
-1. [Resumen ejecutivo](#1-resumen-ejecutivo)
+1. [Visión general de la solución](#1-visión-general-de-la-solución)
 2. [Alcance y requisitos](#2-alcance-y-requisitos)
 3. [Decisiones arquitectónicas](#3-decisiones-arquitectónicas)
 4. [Diagrama de Contexto (C4 — Nivel 1)](#4-diagrama-de-contexto-c4--nivel-1)
 5. [Diagrama de Contenedores (C4 — Nivel 2)](#5-diagrama-de-contenedores-c4--nivel-2)
 6. [Diagrama de Componentes (C4 — Nivel 3)](#6-diagrama-de-componentes-c4--nivel-3)
-7. [Diagrama de Despliegue (Infraestructura AWS)](#7-diagrama-de-despliegue-c4--vista-de-infraestructura-aws)
+7. [Diagrama de Despliegue (C4 — Vista de Infraestructura AWS)](#7-diagrama-de-despliegue-c4--vista-de-infraestructura-aws)
 8. [Diagramas Dinámicos — Flujos Clave](#8-diagramas-dinámicos--flujos-clave)
 9. [Consideraciones transversales](#9-consideraciones-transversales)
 10. [Patrones de diseño aplicados](#10-patrones-de-diseño-aplicados)
@@ -26,7 +26,7 @@
 
 ---
 
-## 1. Resumen ejecutivo
+## 1. Visión general de la solución
 
 Este documento define la arquitectura de solución para el nuevo sistema de banca digital de **BP**, que permitirá a los clientes consultar su histórico de movimientos, realizar transferencias y pagos entre cuentas propias e interbancarias, desde una aplicación web (SPA) y una aplicación móvil con onboarding biométrico.
 
