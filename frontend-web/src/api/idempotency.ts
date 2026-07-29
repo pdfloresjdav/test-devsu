@@ -1,11 +1,11 @@
 const STORAGE_KEY = 'bp:transfer:idempotency-key';
 
 /**
- * Un intento de transferencia usa la MISMA Idempotency-Key aunque el
- * usuario reintente por un timeout de red (decision 3.4/9.4) -- por eso
- * se persiste en sessionStorage en vez de generarse una nueva en cada
- * submit. Solo se limpia explicitamente cuando el intento termina
- * (exito o cuando el usuario decide empezar una transferencia nueva).
+ * A transfer attempt uses the SAME Idempotency-Key even if the user
+ * retries after a network timeout (decision 3.4/9.4) -- that's why it's
+ * persisted in sessionStorage instead of generating a new one on every
+ * submit. It's only cleared explicitly when the attempt ends (success, or
+ * when the user decides to start a new transfer).
  */
 export function getOrCreateIdempotencyKey(): string {
   let key = sessionStorage.getItem(STORAGE_KEY);

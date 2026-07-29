@@ -42,7 +42,7 @@ return [
         'circuit_cooldown_seconds' => (int) env('INTERBANK_CIRCUIT_COOLDOWN_SECONDS', 30),
     ],
 
-    'transferencias' => [
+    'transfers' => [
         'idempotency_ttl_seconds' => (int) env('IDEMPOTENCY_CACHE_TTL_SECONDS', 86400),
         'step_up_threshold' => (float) env('STEP_UP_THRESHOLD', 1000),
     ],

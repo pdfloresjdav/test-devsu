@@ -16,9 +16,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(S3Client::class, fn () => new S3Client([
             'version' => 'latest',
-            'region' => config('services.auditoria.s3_region'),
-            'endpoint' => config('services.auditoria.s3_endpoint') ?: null,
-            'use_path_style_endpoint' => (bool) config('services.auditoria.s3_endpoint'),
+            'region' => config('services.audit.s3_region'),
+            'endpoint' => config('services.audit.s3_endpoint') ?: null,
+            'use_path_style_endpoint' => (bool) config('services.audit.s3_endpoint'),
             'credentials' => env('AWS_ACCESS_KEY_ID') ? [
                 'key' => env('AWS_ACCESS_KEY_ID'),
                 'secret' => env('AWS_SECRET_ACCESS_KEY'),
@@ -28,12 +28,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(AuditRepository::class, fn ($app) => new DynamoDbAuditRepository(
             $app->make(DynamoDbClient::class),
             $app->make(Marshaler::class),
-            config('services.auditoria.table'),
+            config('services.audit.table'),
         ));
 
         $this->app->singleton(WormArchiver::class, fn ($app) => new WormArchiver(
             $app->make(S3Client::class),
-            config('services.auditoria.bucket'),
+            config('services.audit.bucket'),
         ));
     }
 

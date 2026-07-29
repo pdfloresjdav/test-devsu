@@ -10,7 +10,7 @@ class SetupEventBus extends Command
 {
     protected $signature = 'events:setup-bus';
 
-    protected $description = 'Crea el bus de EventBridge de dominio si no existe (idempotente)';
+    protected $description = 'Creates the domain EventBridge bus if it does not exist (idempotent)';
 
     public function handle(EventBridgeClient $client): int
     {
@@ -18,13 +18,13 @@ class SetupEventBus extends Command
 
         try {
             $client->createEventBus(['Name' => $busName]);
-            $this->info("Bus [{$busName}] creado.");
+            $this->info("Bus [{$busName}] created.");
         } catch (EventBridgeException $e) {
             if ($e->getAwsErrorCode() !== 'ResourceAlreadyExistsException') {
                 throw $e;
             }
 
-            $this->info("El bus [{$busName}] ya existia.");
+            $this->info("Bus [{$busName}] already existed.");
         }
 
         return self::SUCCESS;

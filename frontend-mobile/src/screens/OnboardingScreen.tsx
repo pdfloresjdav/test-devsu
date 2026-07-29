@@ -1,79 +1,80 @@
 import { useState } from 'react';
 import { ActivityIndicator, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import { bffFetch, BffError } from '../api/bffClient';
-import type { OnboardingResultado } from '../api/types';
+import type { OnboardingResult } from '../api/types';
 
 interface Props {
-  onAprobado: (clienteId: string) => void;
+  onApproved: (customerId: string) => void;
 }
 
 /**
- * Item 10.2: captura de documento/selfie SIMULADA (sin expo-camera) — dos
- * botones marcan la "captura" como hecha y arman el string que espera el
- * body de POST /onboarding de bff-mobile. Con documento_identidad que
- * empieza con "RECHAZA-" (FakeKycProvider), el proveedor KYC simula un
- * rechazo — mismo criterio determinista que ya usan bff-mobile y
- * frontend-web para poder probar ambas ramas sin un proveedor KYC real.
+ * Item 10.2: SIMULATED document/selfie capture (no expo-camera) — two
+ * buttons mark the "capture" as done and build the string expected by the
+ * bff-mobile POST /onboarding body. With an identity_document starting
+ * with "REJECT-" (FakeKycProvider), the KYC provider simulates a
+ * rejection — same deterministic criterion already used by bff-mobile and
+ * frontend-web to be able to test both branches without a real KYC
+ * provider.
  */
-export function OnboardingScreen({ onAprobado }: Props) {
-  const [clienteId, setClienteId] = useState('1003');
-  const [nombre, setNombre] = useState('');
+export function OnboardingScreen({ onApproved }: Props) {
+  const [customerId, setCustomerId] = useState('1003');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [documentoIdentidad, setDocumentoIdentidad] = useState('');
-  const [documentoCapturado, setDocumentoCapturado] = useState(false);
-  const [selfieCapturada, setSelfieCapturada] = useState(false);
-  const [enviando, setEnviando] = useState(false);
+  const [identityDocument, setIdentityDocument] = useState('');
+  const [documentCaptured, setDocumentCaptured] = useState(false);
+  const [selfieCaptured, setSelfieCaptured] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const listoParaEnviar =
-    nombre.length > 0 &&
+  const readyToSubmit =
+    name.length > 0 &&
     email.length > 0 &&
-    documentoIdentidad.length > 0 &&
-    documentoCapturado &&
-    selfieCapturada &&
-    !enviando;
+    identityDocument.length > 0 &&
+    documentCaptured &&
+    selfieCaptured &&
+    !sending;
 
-  const enviar = async () => {
-    setEnviando(true);
+  const submit = async () => {
+    setSending(true);
     setError(null);
 
     try {
-      const resultado = await bffFetch<OnboardingResultado>('/onboarding', {
+      const result = await bffFetch<OnboardingResult>('/onboarding', {
         method: 'POST',
         body: JSON.stringify({
-          cliente_id: clienteId,
-          nombre,
+          customer_id: customerId,
+          name,
           email,
-          documento_identidad: documentoIdentidad,
-          selfie: 'selfie-capturada-simulada',
+          identity_document: identityDocument,
+          selfie: 'simulated-captured-selfie',
         }),
       });
 
-      onAprobado(resultado.usuario_id);
+      onApproved(result.user_id);
     } catch (err) {
-      setError(err instanceof BffError ? err.message : 'No se pudo completar el onboarding.');
+      setError(err instanceof BffError ? err.message : 'Could not complete the onboarding.');
     } finally {
-      setEnviando(false);
+      setSending(false);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Alta de cliente</Text>
+      <Text style={styles.title}>Customer sign-up</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="ID de cliente"
-        value={clienteId}
-        onChangeText={setClienteId}
-        testID="input-cliente-id"
+        placeholder="Customer ID"
+        value={customerId}
+        onChangeText={setCustomerId}
+        testID="input-customer-id"
       />
       <TextInput
         style={styles.input}
-        placeholder="Nombre completo"
-        value={nombre}
-        onChangeText={setNombre}
-        testID="input-nombre"
+        placeholder="Full name"
+        value={name}
+        onChangeText={setName}
+        testID="input-name"
       />
       <TextInput
         style={styles.input}
@@ -86,24 +87,24 @@ export function OnboardingScreen({ onAprobado }: Props) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Documento de identidad"
-        value={documentoIdentidad}
-        onChangeText={setDocumentoIdentidad}
-        testID="input-documento"
+        placeholder="Identity document"
+        value={identityDocument}
+        onChangeText={setIdentityDocument}
+        testID="input-document"
       />
 
       <Button
-        title={documentoCapturado ? 'Documento capturado ✓' : 'Simular captura de documento'}
-        onPress={() => setDocumentoCapturado(true)}
+        title={documentCaptured ? 'Document captured ✓' : 'Simulate document capture'}
+        onPress={() => setDocumentCaptured(true)}
       />
       <Button
-        title={selfieCapturada ? 'Selfie capturada ✓' : 'Simular captura de selfie'}
-        onPress={() => setSelfieCapturada(true)}
+        title={selfieCaptured ? 'Selfie captured ✓' : 'Simulate selfie capture'}
+        onPress={() => setSelfieCaptured(true)}
       />
 
-      <Button title="Continuar" onPress={enviar} disabled={!listoParaEnviar} />
+      <Button title="Continue" onPress={submit} disabled={!readyToSubmit} />
 
-      {enviando && <ActivityIndicator testID="onboarding-loading" />}
+      {sending && <ActivityIndicator testID="onboarding-loading" />}
       {error && (
         <Text style={styles.error} role="alert">
           {error}

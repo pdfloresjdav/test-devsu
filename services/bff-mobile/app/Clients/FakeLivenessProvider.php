@@ -5,18 +5,18 @@ namespace App\Clients;
 use App\Contracts\LivenessProvider;
 
 /**
- * Simula AWS Rekognition Face Liveness mientras se prueba en local.
- * Determinista: si la nueva selfie es literalmente "RECHAZA", la
- * revalidacion falla; cualquier otro valor se aprueba.
+ * Simulates AWS Rekognition Face Liveness while testing locally.
+ * Deterministic: if the new selfie is literally "REJECT", the revalidation
+ * fails; any other value is approved.
  */
 class FakeLivenessProvider implements LivenessProvider
 {
-    public function revalidar(string $selfieReferencia, string $selfieNueva): array
+    public function revalidate(string $referenceSelfie, string $newSelfie): array
     {
-        if ($selfieNueva === 'RECHAZA') {
-            return ['aprobado' => false, 'score' => 0.30];
+        if ($newSelfie === 'REJECT') {
+            return ['approved' => false, 'score' => 0.30];
         }
 
-        return ['aprobado' => true, 'score' => 0.95];
+        return ['approved' => true, 'score' => 0.95];
     }
 }

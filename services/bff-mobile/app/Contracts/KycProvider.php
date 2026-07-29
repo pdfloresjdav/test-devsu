@@ -5,10 +5,10 @@ namespace App\Contracts;
 interface KycProvider
 {
     /**
-     * Verifica el documento de identidad + selfie con prueba de vida
-     * (decision 3.7 del documento de arquitectura).
+     * Verifies the identity document + selfie with liveness proof
+     * (architecture document decision 3.7).
      *
-     * @return array{aprobado: bool, score: float, motivo: ?string}
+     * @return array{approved: bool, score: float, reason: ?string}
      */
-    public function verificar(string $documentoIdentidad, string $selfie): array;
+    public function verify(string $identityDocument, string $selfie): array;
 }

@@ -6,9 +6,9 @@ use App\Contracts\AuditRepository;
 use RuntimeException;
 
 /**
- * Traduce un evento de dominio (el "detail" de un evento de EventBridge) en
- * un registro de auditoria, lo persiste y lo archiva. Separado del
- * consumidor de SQS para poder probarlo sin depender de una cola real.
+ * Translates a domain event (the "detail" of an EventBridge event) into an
+ * audit record, persists it, and archives it. Kept separate from the SQS
+ * consumer so it can be tested without depending on a real queue.
  */
 class AuditEventProcessor
 {
@@ -19,21 +19,21 @@ class AuditEventProcessor
     }
 
     /**
-     * @param array<string, mixed> $eventBridgeEvent Evento completo tal como lo entrega EventBridge/SQS.
+     * @param array<string, mixed> $eventBridgeEvent Full event as delivered by EventBridge/SQS.
      */
-    public function procesar(array $eventBridgeEvent): void
+    public function process(array $eventBridgeEvent): void
     {
-        $accion = $eventBridgeEvent['detail-type'] ?? null;
-        $detalle = $eventBridgeEvent['detail'] ?? null;
+        $action = $eventBridgeEvent['detail-type'] ?? null;
+        $detail = $eventBridgeEvent['detail'] ?? null;
 
-        if (! is_string($accion) || ! is_array($detalle)) {
-            throw new RuntimeException('Evento invalido: falta detail-type o detail.');
+        if (! is_string($action) || ! is_array($detail)) {
+            throw new RuntimeException('Invalid event: missing detail-type or detail.');
         }
 
-        $actor = $detalle['actor'] ?? 'system';
+        $actor = $detail['actor'] ?? 'system';
 
-        $registro = $this->repository->registrar($actor, $accion, $detalle);
+        $record = $this->repository->register($actor, $action, $detail);
 
-        $this->archiver->archivar($registro);
+        $this->archiver->archive($record);
     }
 }

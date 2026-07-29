@@ -12,9 +12,9 @@ use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
 
 /**
- * Resuelve el adaptador de canal segun NOTIFICATION_DRIVER: 'log' (dev,
- * demuestra el flujo sin proveedores reales) o 'aws' (Pinpoint para
- * push/sms, SES para email). Cambiar el driver es solo configuracion.
+ * Resolves the channel adapter based on NOTIFICATION_DRIVER: 'log' (dev,
+ * demonstrates the full flow without real providers) or 'aws' (Pinpoint
+ * for push/sms, SES for email). Switching drivers is configuration only.
  */
 class NotificationChannelFactory
 {
@@ -22,23 +22,23 @@ class NotificationChannelFactory
     {
     }
 
-    public function make(string $canal): NotificationChannel
+    public function make(string $channel): NotificationChannel
     {
-        if (config('services.notificaciones.driver') !== 'aws') {
-            return new LogNotificationChannel($canal);
+        if (config('services.notifications.driver') !== 'aws') {
+            return new LogNotificationChannel($channel);
         }
 
-        return match ($canal) {
+        return match ($channel) {
             'push', 'sms' => new PinpointNotificationChannel(
                 $this->app->make(PinpointClient::class),
-                config('services.notificaciones.pinpoint_application_id'),
-                $canal === 'push' ? 'GCM' : 'SMS',
+                config('services.notifications.pinpoint_application_id'),
+                $channel === 'push' ? 'GCM' : 'SMS',
             ),
             'email' => new SesNotificationChannel(
                 $this->app->make(SesClient::class),
-                config('services.notificaciones.ses_from_address'),
+                config('services.notifications.ses_from_address'),
             ),
-            default => throw new InvalidArgumentException("Canal desconocido: [{$canal}]"),
+            default => throw new InvalidArgumentException("Unknown channel: [{$channel}]"),
         };
     }
 }

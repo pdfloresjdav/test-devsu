@@ -3,20 +3,20 @@
 namespace App\Services;
 
 /**
- * Decide por que canal(es) notificar segun el tipo de evento (decision
- * 3.12: separar el canal inmediato -push- del canal de respaldo -email-
- * para dar redundancia real). El mapeo vive en config para poder ajustarlo
- * sin tocar codigo.
+ * Decides which channel(s) to notify through based on the event type
+ * (decision 3.12: separate the immediate channel -push- from the backup
+ * channel -email- to give real redundancy). The mapping lives in config so
+ * it can be adjusted without touching code.
  */
 class ChannelRouter
 {
     /**
      * @return array<int, string>
      */
-    public function canalesPara(string $accion): array
+    public function channelsFor(string $action): array
     {
-        $mapa = config('services.notificaciones.channel_map', []);
+        $map = config('services.notifications.channel_map', []);
 
-        return $mapa[$accion] ?? $mapa['default'] ?? ['push'];
+        return $map[$action] ?? $map['default'] ?? ['push'];
     }
 }

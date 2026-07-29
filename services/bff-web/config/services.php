@@ -35,8 +35,8 @@ return [
         ],
     ],
 
-    // Las URLs de Datos Basicos/Movimientos/Transferencias ya se resuelven
-    // en bp-common.internal_services.* (packages/bp-common/config/bp-common.php)
-    // a partir de las mismas variables *_BASE_URL de este .env.
+    // Customer Data/Movements/Transfers URLs are already resolved in
+    // bp-common.internal_services.* (packages/bp-common/config/bp-common.php)
+    // from the same *_BASE_URL variables in this .env.
 
 ];

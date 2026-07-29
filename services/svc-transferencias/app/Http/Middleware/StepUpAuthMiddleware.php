@@ -8,12 +8,12 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Decision 3.6: para transferencias sobre un umbral, exige que el JWT
- * traiga evidencia de autenticacion reforzada (acr=step-up o amr con mfa).
- * Corre ANTES del middleware de idempotencia a proposito: un rechazo por
- * falta de step-up no debe quedar cacheado bajo la Idempotency-Key, porque
- * el cliente puede reintentar la misma operacion con un JWT distinto tras
- * reautenticarse.
+ * Decision 3.6: for transfers over a threshold, requires the JWT to carry
+ * evidence of step-up authentication (acr=step-up or amr with mfa). Runs
+ * BEFORE the idempotency middleware on purpose: a rejection for missing
+ * step-up must not be cached under the Idempotency-Key, because the
+ * client may retry the same operation with a different JWT after
+ * re-authenticating.
  */
 class StepUpAuthMiddleware
 {
@@ -23,9 +23,9 @@ class StepUpAuthMiddleware
 
     public function handle(Request $request, Closure $next): Response
     {
-        $monto = (float) $request->input('monto', 0);
+        $amount = (float) $request->input('amount', 0);
 
-        if ($monto <= $this->threshold) {
+        if ($amount <= $this->threshold) {
             return $next($request);
         }
 
@@ -33,11 +33,11 @@ class StepUpAuthMiddleware
         $acr = $claims['acr'] ?? null;
         $amr = $claims['amr'] ?? [];
 
-        $tieneStepUp = $acr === 'step-up' || (is_array($amr) && in_array('mfa', $amr, true));
+        $hasStepUp = $acr === 'step-up' || (is_array($amr) && in_array('mfa', $amr, true));
 
-        if (! $tieneStepUp) {
+        if (! $hasStepUp) {
             return ApiResponse::error(
-                "Esta transferencia supera el umbral de {$this->threshold} y requiere autenticacion reforzada.",
+                "This transfer exceeds the threshold of {$this->threshold} and requires step-up authentication.",
                 'step_up_required',
                 status: 403,
             );

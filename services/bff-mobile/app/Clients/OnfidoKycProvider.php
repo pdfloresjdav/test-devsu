@@ -7,10 +7,10 @@ use GuzzleHttp\ClientInterface;
 use Throwable;
 
 /**
- * Implementacion real contra un proveedor KYC tipo Onfido/iProov (decision
- * 3.7). Se activa con KYC_DRIVER=http + KYC_BASE_URL/KYC_API_KEY. No se
- * prueba contra un sandbox real (requeriria cuenta paga) -- queda como
- * codigo listo para produccion, verificado solo por lectura.
+ * Real implementation against an Onfido/iProov-style KYC provider (decision
+ * 3.7). Activated with KYC_DRIVER=http + KYC_BASE_URL/KYC_API_KEY. Not
+ * tested against a real sandbox (would require a paid account) -- kept as
+ * production-ready code, verified by reading only.
  */
 class OnfidoKycProvider implements KycProvider
 {
@@ -21,23 +21,23 @@ class OnfidoKycProvider implements KycProvider
     ) {
     }
 
-    public function verificar(string $documentoIdentidad, string $selfie): array
+    public function verify(string $identityDocument, string $selfie): array
     {
         try {
             $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/') . '/verifications', [
                 'headers' => ['Authorization' => "Token token={$this->apiKey}"],
-                'json' => ['documento_identidad' => $documentoIdentidad, 'selfie' => $selfie],
+                'json' => ['identity_document' => $identityDocument, 'selfie' => $selfie],
             ]);
         } catch (Throwable $e) {
-            return ['aprobado' => false, 'score' => 0.0, 'motivo' => "No se pudo contactar al proveedor KYC: {$e->getMessage()}"];
+            return ['approved' => false, 'score' => 0.0, 'reason' => "Could not reach the KYC provider: {$e->getMessage()}"];
         }
 
         $body = json_decode((string) $response->getBody(), true);
 
         return [
-            'aprobado' => ($body['result'] ?? null) === 'clear',
+            'approved' => ($body['result'] ?? null) === 'clear',
             'score' => (float) ($body['score'] ?? 0),
-            'motivo' => $body['reason'] ?? null,
+            'reason' => $body['reason'] ?? null,
         ];
     }
 }

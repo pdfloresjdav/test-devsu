@@ -5,11 +5,10 @@ namespace BP\Common\Auth;
 use Illuminate\Http\Request;
 
 /**
- * Helper para leer los claims que JwtAuthMiddleware deja en el request.
- * Centraliza como se obtiene el "actor" (usuario autenticado) para que
- * todos los servicios que publican eventos de dominio lo hagan de la misma
- * forma -- necesario para que la auditoria pueda atribuir cada accion a un
- * cliente (Fase 5).
+ * Helper to read the claims that JwtAuthMiddleware leaves on the request.
+ * Centralizes how the "actor" (authenticated user) is obtained so every
+ * service that publishes domain events does it the same way -- needed so
+ * audit can attribute each action to a customer (Phase 5).
  */
 class JwtClaims
 {
@@ -27,10 +26,10 @@ class JwtClaims
     }
 
     /**
-     * El token crudo (no decodificado), para reenviarlo tal cual hacia un
-     * microservicio interno -- los BFFs no re-emiten credenciales propias,
-     * propagan el mismo JWT que ya valido JwtAuthMiddleware (decision 3.5:
-     * cada servicio es su propio Resource Server).
+     * The raw (undecoded) token, to forward it as-is to an internal
+     * microservice -- the BFFs don't reissue their own credentials, they
+     * propagate the same JWT that JwtAuthMiddleware already validated
+     * (decision 3.5: each service is its own Resource Server).
      */
     public static function bearerToken(Request $request): ?string
     {

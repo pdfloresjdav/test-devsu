@@ -1,1 +1,1 @@
-Tuviste una actividad nueva en tu cuenta BP ({{ $accion ?? 'evento' }}).
+You had new activity on your BP account ({{ $action ?? 'event' }}).

@@ -5,15 +5,16 @@ namespace App\Services;
 use Aws\S3\S3Client;
 
 /**
- * Archiva cada registro de auditoria en S3 como copia de largo plazo.
+ * Archives each audit record in S3 as a long-term copy.
  *
- * IMPORTANTE: en AWS real, el bucket configurado debe tener Object Lock en
- * modo Compliance habilitado (ver decision 3.9 del documento de
- * arquitectura) -- eso es lo que da inmutabilidad real (ni el root de la
- * cuenta puede borrar el objeto antes de vencer la retencion). LocalStack
- * no soporta Object Lock real, asi que en local esta clase solo es un
- * stand-in que demuestra el flujo (escribir el objeto), sin garantizar
- * inmutabilidad. No confundir "ya funciona en local" con "ya es inmutable".
+ * IMPORTANT: on real AWS, the configured bucket must have Object Lock in
+ * Compliance mode enabled (see decision 3.9 of the architecture document)
+ * -- that's what gives real immutability (not even the account root can
+ * delete the object before the retention period expires). LocalStack
+ * doesn't support real Object Lock, so locally this class is only a
+ * stand-in that demonstrates the flow (writing the object), without
+ * guaranteeing immutability. Don't confuse "it already works locally"
+ * with "it's already immutable".
  */
 class WormArchiver
 {
@@ -24,16 +25,16 @@ class WormArchiver
     }
 
     /**
-     * @param array<string, mixed> $registro
+     * @param array<string, mixed> $record
      */
-    public function archivar(array $registro): void
+    public function archive(array $record): void
     {
-        $key = "auditoria/{$registro['actor']}/{$registro['audit_id']}.json";
+        $key = "audit/{$record['actor']}/{$record['audit_id']}.json";
 
         $this->client->putObject([
             'Bucket' => $this->bucket,
             'Key' => $key,
-            'Body' => json_encode($registro, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'Body' => json_encode($record, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
             'ContentType' => 'application/json',
         ]);
     }

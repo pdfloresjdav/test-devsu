@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use App\Contracts\MovimientosRepository;
-use App\Repositories\CachedMovimientosRepository;
-use App\Repositories\DynamoDbMovimientosRepository;
+use App\Contracts\MovementsRepository;
+use App\Repositories\CachedMovementsRepository;
+use App\Repositories\DynamoDbMovementsRepository;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
 use Illuminate\Support\Facades\Cache;
@@ -14,17 +14,17 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(MovimientosRepository::class, function ($app) {
-            $dynamo = new DynamoDbMovimientosRepository(
+        $this->app->singleton(MovementsRepository::class, function ($app) {
+            $dynamo = new DynamoDbMovementsRepository(
                 $app->make(DynamoDbClient::class),
                 $app->make(Marshaler::class),
-                config('services.movimientos.table'),
+                config('services.movements.table'),
             );
 
-            return new CachedMovimientosRepository(
+            return new CachedMovementsRepository(
                 $dynamo,
-                Cache::store(config('services.movimientos.cache_store')),
-                (int) config('services.movimientos.cache_ttl_seconds'),
+                Cache::store(config('services.movements.cache_store')),
+                (int) config('services.movements.cache_ttl_seconds'),
             );
         });
     }

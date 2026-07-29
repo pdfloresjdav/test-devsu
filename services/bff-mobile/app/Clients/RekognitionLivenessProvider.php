@@ -7,43 +7,42 @@ use Aws\Rekognition\RekognitionClient;
 use Throwable;
 
 /**
- * Implementacion real con AWS Rekognition (decision 3.7). Simplificacion
- * documentada: la API completa de Face Liveness (CreateFaceLivenessSession
- * + streaming de video desde el SDK movil) requiere una sesion iniciada
- * por la app; para la revalidacion mediada por el BFF de esta version se
- * usa CompareFaces entre la selfie de referencia del onboarding y la
- * nueva selfie -- una verificacion mas liviana, suficiente para un
- * step-up de riesgo medio. No se prueba contra AWS real (no hay
- * Rekognition en LocalStack sin la version Pro).
+ * Real implementation with AWS Rekognition (decision 3.7). Documented
+ * simplification: the full Face Liveness API (CreateFaceLivenessSession +
+ * video streaming from the mobile SDK) requires a session started by the
+ * app; for the BFF-mediated revalidation in this version, CompareFaces is
+ * used between the onboarding reference selfie and the new selfie -- a
+ * lighter check, enough for a medium-risk step-up. Not tested against real
+ * AWS (there's no Rekognition in LocalStack without the Pro version).
  */
 class RekognitionLivenessProvider implements LivenessProvider
 {
-    private const UMBRAL_SIMILITUD = 90.0;
+    private const SIMILARITY_THRESHOLD = 90.0;
 
     public function __construct(private readonly RekognitionClient $client)
     {
     }
 
-    public function revalidar(string $selfieReferencia, string $selfieNueva): array
+    public function revalidate(string $referenceSelfie, string $newSelfie): array
     {
         try {
-            $resultado = $this->client->compareFaces([
-                'SourceImage' => ['Bytes' => base64_decode($selfieReferencia)],
-                'TargetImage' => ['Bytes' => base64_decode($selfieNueva)],
-                'SimilarityThreshold' => self::UMBRAL_SIMILITUD,
+            $result = $this->client->compareFaces([
+                'SourceImage' => ['Bytes' => base64_decode($referenceSelfie)],
+                'TargetImage' => ['Bytes' => base64_decode($newSelfie)],
+                'SimilarityThreshold' => self::SIMILARITY_THRESHOLD,
             ]);
         } catch (Throwable $e) {
-            return ['aprobado' => false, 'score' => 0.0];
+            return ['approved' => false, 'score' => 0.0];
         }
 
-        $coincidencias = $resultado['FaceMatches'] ?? [];
+        $matches = $result['FaceMatches'] ?? [];
 
-        if (empty($coincidencias)) {
-            return ['aprobado' => false, 'score' => 0.0];
+        if (empty($matches)) {
+            return ['approved' => false, 'score' => 0.0];
         }
 
-        $similitud = (float) $coincidencias[0]['Similarity'];
+        $similarity = (float) $matches[0]['Similarity'];
 
-        return ['aprobado' => $similitud >= self::UMBRAL_SIMILITUD, 'score' => $similitud / 100];
+        return ['approved' => $similarity >= self::SIMILARITY_THRESHOLD, 'score' => $similarity / 100];
     }
 }

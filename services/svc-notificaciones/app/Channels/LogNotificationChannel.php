@@ -6,24 +6,24 @@ use App\Contracts\NotificationChannel;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Driver de desarrollo: en vez de enviar la notificacion de verdad, la deja
- * en el log con el canal, destinatario y contenido -- suficiente para
- * demostrar el flujo completo (decision de la Fase 6) sin depender de
- * Pinpoint/SES reales ni de soporte de Pinpoint en LocalStack (no lo
- * tiene). Cambiar a NOTIFICATION_DRIVER=aws en el .env activa
- * PinpointNotificationChannel/SesNotificationChannel sin tocar codigo.
+ * Development driver: instead of really sending the notification, it logs
+ * the channel, recipient and content -- enough to demonstrate the full flow
+ * (Fase 6 decision) without depending on real Pinpoint/SES or on Pinpoint
+ * support in LocalStack (it doesn't have any). Switching to
+ * NOTIFICATION_DRIVER=aws in .env activates
+ * PinpointNotificationChannel/SesNotificationChannel without touching code.
  */
 class LogNotificationChannel implements NotificationChannel
 {
-    public function __construct(private readonly string $canal)
+    public function __construct(private readonly string $channel)
     {
     }
 
-    public function send(string $destinatario, string $subject, string $body): void
+    public function send(string $recipient, string $subject, string $body): void
     {
-        Log::info('Notificacion enviada (driver log)', [
-            'canal' => $this->canal,
-            'destinatario' => $destinatario,
+        Log::info('Notification sent (log driver)', [
+            'channel' => $this->channel,
+            'recipient' => $recipient,
             'subject' => $subject,
             'body' => $body,
         ]);

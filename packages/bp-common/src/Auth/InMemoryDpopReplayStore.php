@@ -3,9 +3,9 @@
 namespace BP\Common\Auth;
 
 /**
- * Store en memoria de proceso. En produccion multi-instancia esto deberia
- * respaldarse en Redis (el mismo Redis usado para Idempotency-Key), para que
- * el replay se detecte entre workers/instancias y no solo dentro de uno.
+ * In-process memory store. In a multi-instance production setup this
+ * should be backed by Redis (the same Redis used for the Idempotency-Key),
+ * so replay is detected across workers/instances and not just within one.
  */
 class InMemoryDpopReplayStore implements DpopReplayStoreInterface
 {

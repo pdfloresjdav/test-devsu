@@ -1,5 +1,5 @@
-# Se construye con el contexto en la RAIZ del monorepo, para poder copiar
-# packages/bp-common (dependencia local via path-repository):
+# Built with the context at the monorepo ROOT, to be able to copy
+# packages/bp-common (local dependency via path-repository):
 #   docker build -f services/bff-web/Dockerfile -t bp/bff-web .
 
 FROM php:8.3-cli AS base

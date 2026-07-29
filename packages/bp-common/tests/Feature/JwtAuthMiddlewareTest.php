@@ -11,31 +11,31 @@ class JwtAuthMiddlewareTest extends TestCase
     protected function defineRoutes($router): void
     {
         /** @var Router $router */
-        $router->get('/protegida', fn () => response()->json(['ok' => true]))
+        $router->get('/protected', fn () => response()->json(['ok' => true]))
             ->middleware(JwtAuthMiddleware::class);
     }
 
-    public function test_rechaza_sin_header_authorization(): void
+    public function test_rejects_without_authorization_header(): void
     {
-        $this->getJson('/protegida')
+        $this->getJson('/protected')
             ->assertStatus(401)
             ->assertJsonPath('error.code', 'missing_token');
     }
 
-    public function test_rechaza_un_token_invalido(): void
+    public function test_rejects_an_invalid_token(): void
     {
-        $this->withHeader('Authorization', 'Bearer token-basura')
-            ->getJson('/protegida')
+        $this->withHeader('Authorization', 'Bearer garbage-token')
+            ->getJson('/protected')
             ->assertStatus(401)
             ->assertJsonPath('error.code', 'invalid_token');
     }
 
-    public function test_permite_pasar_con_un_token_valido(): void
+    public function test_allows_through_with_a_valid_token(): void
     {
         $token = $this->signToken();
 
         $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/protegida')
+            ->getJson('/protected')
             ->assertStatus(200)
             ->assertJson(['ok' => true]);
     }

@@ -34,11 +34,11 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(IdempotencyMiddleware::class, fn ($app) => new IdempotencyMiddleware(
             Cache::store('redis'),
-            (int) config('services.transferencias.idempotency_ttl_seconds'),
+            (int) config('services.transfers.idempotency_ttl_seconds'),
         ));
 
         $this->app->bind(StepUpAuthMiddleware::class, fn () => new StepUpAuthMiddleware(
-            (float) config('services.transferencias.step_up_threshold'),
+            (float) config('services.transfers.step_up_threshold'),
         ));
     }
 

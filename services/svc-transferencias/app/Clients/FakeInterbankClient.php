@@ -7,19 +7,19 @@ use App\Contracts\InterbankException;
 use Illuminate\Support\Str;
 
 /**
- * Simula la red interbancaria mientras no exista una integracion real.
- * Determinista para poder probar el camino de compensacion: cualquier
- * cuenta destino que empiece con "FALLA-" es rechazada por el banco
- * destino; el resto se confirma.
+ * Simulates the interbank network while no real integration exists.
+ * Deterministic so the compensation path can be tested: any destination
+ * account starting with "FAIL-" is rejected by the destination bank; the
+ * rest are confirmed.
  */
 class FakeInterbankClient implements InterbankClient
 {
-    public function ejecutar(string $cuentaDestino, float $monto): array
+    public function execute(string $destinationAccount, float $amount): array
     {
-        if (str_starts_with($cuentaDestino, 'FALLA-')) {
-            throw new InterbankException("El banco destino rechazo la transferencia hacia [{$cuentaDestino}].");
+        if (str_starts_with($destinationAccount, 'FAIL-')) {
+            throw new InterbankException("The destination bank rejected the transfer to [{$destinationAccount}].");
         }
 
-        return ['confirmacion_id' => (string) Str::uuid()];
+        return ['confirmation_id' => (string) Str::uuid()];
     }
 }

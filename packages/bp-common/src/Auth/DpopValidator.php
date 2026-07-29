@@ -7,9 +7,9 @@ use Firebase\JWT\JWT;
 use Throwable;
 
 /**
- * Valida un DPoP proof (RFC 9449) para atar el access token a una clave
- * del dispositivo cliente -- decision 3.6 del documento de arquitectura.
- * Mitiga la reutilizacion de un access token robado desde otro origen.
+ * Validates a DPoP proof (RFC 9449) to bind the access token to a client
+ * device key -- decision 3.6 of the architecture document. Mitigates
+ * reuse of a stolen access token from a different origin.
  */
 class DpopValidator
 {
@@ -50,7 +50,7 @@ class DpopValidator
     {
         $parts = explode('.', $dpopProof);
         if (count($parts) !== 3) {
-            throw new DpopValidationException('El DPoP proof no tiene el formato de un JWT.');
+            throw new DpopValidationException('The DPoP proof is not shaped like a JWT.');
         }
 
         [$headerB64, $payloadB64] = $parts;
@@ -58,18 +58,18 @@ class DpopValidator
         $payload = json_decode(JWT::urlsafeB64Decode($payloadB64), true);
 
         if (! is_array($header) || ! is_array($payload)) {
-            throw new DpopValidationException('El DPoP proof no se pudo decodificar.');
+            throw new DpopValidationException('The DPoP proof could not be decoded.');
         }
 
         if (! isset($header['jwk']) || ! is_array($header['jwk'])) {
-            throw new DpopValidationException('El DPoP proof no trae la clave publica (jwk) en el header.');
+            throw new DpopValidationException("The DPoP proof doesn't carry the public key (jwk) in its header.");
         }
 
         try {
             $key = JWK::parseKey($header['jwk'], $header['alg'] ?? 'ES256');
             JWT::decode($dpopProof, $key);
         } catch (Throwable $e) {
-            throw new DpopValidationException("Firma del DPoP proof invalida: {$e->getMessage()}", previous: $e);
+            throw new DpopValidationException("Invalid DPoP proof signature: {$e->getMessage()}", previous: $e);
         }
 
         return [$header, $payload];
@@ -81,7 +81,7 @@ class DpopValidator
     private function assertType(array $header): void
     {
         if (($header['typ'] ?? null) !== 'dpop+jwt') {
-            throw new DpopValidationException("El header 'typ' del DPoP proof debe ser 'dpop+jwt'.");
+            throw new DpopValidationException("The DPoP proof's 'typ' header must be 'dpop+jwt'.");
         }
     }
 
@@ -101,7 +101,7 @@ class DpopValidator
     private function assertHttpMethodMatches(array $claims, string $httpMethod): void
     {
         if (strtoupper((string) ($claims['htm'] ?? '')) !== strtoupper($httpMethod)) {
-            throw new DpopValidationException('El claim htm del DPoP proof no coincide con el metodo HTTP de la request.');
+            throw new DpopValidationException("The DPoP proof's htm claim doesn't match the request's HTTP method.");
         }
     }
 
@@ -113,7 +113,7 @@ class DpopValidator
         $normalize = static fn (string $uri): string => rtrim(strtok($uri, '?') ?: $uri, '/');
 
         if ($normalize((string) ($claims['htu'] ?? '')) !== $normalize($httpUri)) {
-            throw new DpopValidationException('El claim htu del DPoP proof no coincide con la URL de la request.');
+            throw new DpopValidationException("The DPoP proof's htu claim doesn't match the request's URL.");
         }
     }
 
@@ -126,7 +126,7 @@ class DpopValidator
         $now = time();
 
         if ($iat <= 0 || abs($now - $iat) > $this->iatLeewaySeconds) {
-            throw new DpopValidationException('El DPoP proof esta expirado o su iat no es valido.');
+            throw new DpopValidationException('The DPoP proof is expired or its iat is not valid.');
         }
     }
 
@@ -138,11 +138,11 @@ class DpopValidator
         $jti = (string) ($claims['jti'] ?? '');
 
         if ($jti === '') {
-            throw new DpopValidationException('El DPoP proof no trae jti.');
+            throw new DpopValidationException("The DPoP proof doesn't carry a jti.");
         }
 
         if (! $this->replayStore->registerOnce($jti, $this->iatLeewaySeconds * 2)) {
-            throw new DpopValidationException('El DPoP proof ya fue utilizado (posible replay).');
+            throw new DpopValidationException('This DPoP proof was already used (possible replay).');
         }
     }
 
@@ -152,12 +152,12 @@ class DpopValidator
     private function assertBoundToAccessToken(array $jwk, string $expectedThumbprint): void
     {
         if ($this->jwkThumbprint($jwk) !== $expectedThumbprint) {
-            throw new DpopValidationException('La clave del DPoP proof no coincide con el cnf.jkt del access token.');
+            throw new DpopValidationException("The DPoP proof's key doesn't match the access token's cnf.jkt.");
         }
     }
 
     /**
-     * JWK Thumbprint segun RFC 7638 (miembros ordenados alfabeticamente).
+     * JWK Thumbprint per RFC 7638 (alphabetically ordered members).
      *
      * @param array<string, mixed> $jwk
      */
@@ -166,7 +166,7 @@ class DpopValidator
         $members = match ($jwk['kty'] ?? null) {
             'RSA' => ['e' => $jwk['e'], 'kty' => $jwk['kty'], 'n' => $jwk['n']],
             'EC' => ['crv' => $jwk['crv'], 'kty' => $jwk['kty'], 'x' => $jwk['x'], 'y' => $jwk['y']],
-            default => throw new DpopValidationException('Tipo de clave (kty) no soportado para thumbprint.'),
+            default => throw new DpopValidationException('Unsupported key type (kty) for thumbprint.'),
         };
 
         $canonicalJson = json_encode($members, JSON_UNESCAPED_SLASHES);

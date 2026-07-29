@@ -25,7 +25,7 @@ El desarrollo avanza por fases siguiendo [`CHECKLIST.md`](CHECKLIST.md); el deta
 ├── services/                # Un microservicio Laravel por carpeta (Fase 2 en adelante)
 ├── frontend-web/            # SPA React + TypeScript (Fase 9)
 ├── frontend-mobile/         # App React Native + TypeScript (Fase 10)
-└── infra/                   # Infraestructura como código para AWS (Fase 13)
+└── infra/                   # Infraestructura como código para AWS (Fase 14)
 ```
 
 ## Requisitos previos
@@ -104,11 +104,11 @@ php artisan serve --port=8001
 
 Endpoints:
 - `GET /health` — healthcheck (automático, provisto por `bp-common`).
-- `GET /clientes/{id}` — requiere `Authorization: Bearer <JWT>` válido contra el emisor configurado (mock-oidc en local, Auth0 en producción). Prueba con `1001` o `1002`.
+- `GET /customers/{id}` — requiere `Authorization: Bearer <JWT>` válido contra el emisor configurado (mock-oidc en local, Auth0 en producción). Prueba con `1001` o `1002`.
 
 Correr sus tests: `php artisan test` (10 tests: fakes, composición y el endpoint completo, incluyendo el rechazo sin token).
 
-Para apuntar a los sistemas reales cuando existan: `CORE_BANCARIO_DRIVER=http` + `CORE_BANCARIO_BASE_URL=...` y/o `CLIENTE_COMPLEMENTARIO_DRIVER=http` + `CLIENTE_COMPLEMENTARIO_BASE_URL=...` en su `.env` — no requiere cambiar código.
+Para apuntar a los sistemas reales cuando existan: `CORE_BANKING_DRIVER=http` + `CORE_BANKING_BASE_URL=...` y/o `CUSTOMER_PROFILE_DRIVER=http` + `CUSTOMER_PROFILE_BASE_URL=...` en su `.env` — no requiere cambiar código.
 
 Construir su imagen (Octane + Swoole, igual que en producción) desde la **raíz del repo** (necesita `packages/bp-common` en el contexto):
 
@@ -126,15 +126,15 @@ cp .env.example .env
 composer install
 
 # Provisionar la infraestructura local (una sola vez; make up ya debe estar corriendo):
-php artisan movimientos:setup-table   # crea la tabla DynamoDB en LocalStack si no existe
+php artisan movements:setup-table     # crea la tabla DynamoDB en LocalStack si no existe
 php artisan events:setup-bus          # crea el bus de EventBridge "bp-domain-events" si no existe
 
 php artisan serve --port=8002
 ```
 
 Endpoints (requieren `Authorization: Bearer <JWT>`):
-- `GET /cuentas/{id}/movimientos` — historial, más reciente primero (Cache-Aside: la primera lectura pega a DynamoDB, las siguientes a Redis hasta que se registre un movimiento nuevo o expire el TTL).
-- `POST /cuentas/{id}/movimientos` — registra un movimiento (`tipo`: `debito`|`credito`, `monto`, `descripcion`), invalida la caché de esa cuenta y publica `MovementRegistered`.
+- `GET /accounts/{id}/movements` — historial, más reciente primero (Cache-Aside: la primera lectura pega a DynamoDB, las siguientes a Redis hasta que se registre un movimiento nuevo o expire el TTL).
+- `POST /accounts/{id}/movements` — registra un movimiento (`type`: `debit`|`credit`, `amount`, `description`), invalida la caché de esa cuenta y publica `MovementRegistered`.
 
 Correr sus tests: `php artisan test` (9 tests, corren contra el Redis y el LocalStack reales de `docker-compose` — no hay mocks del SDK de AWS).
 
@@ -148,16 +148,16 @@ Orquesta transferencias propias e interbancarias con patrón **Saga** (débito �
 cd services/svc-transferencias
 cp .env.example .env
 composer install
-php artisan migrate   # crea las tablas en la base MySQL dedicada "svc_transferencias"
+php artisan migrate   # crea las tablas en la base MySQL dedicada "svc_transfers"
 php artisan serve --port=8003
 ```
 
-> La base `svc_transferencias` se crea sola la primera vez que se levanta el contenedor de MySQL (`infra/mysql-init/01-databases.sql`). Si tu MySQL local ya existía antes de este script, créala a mano una vez: `docker exec bp-mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS svc_transferencias;"`.
+> La base `svc_transfers` se crea sola la primera vez que se levanta el contenedor de MySQL (`infra/mysql-init/01-databases.sql`). Si tu MySQL local ya existía antes de este script, créala a mano una vez: `docker exec bp-mysql mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS svc_transfers;"`.
 
-Endpoint: `POST /transfers` (requiere `Authorization: Bearer <JWT>` **e** `Idempotency-Key`), body `{cuenta_origen, cuenta_destino, monto, descripcion}`.
+Endpoint: `POST /transfers` (requiere `Authorization: Bearer <JWT>` **e** `Idempotency-Key`), body `{source_account, destination_account, amount, description}`.
 - Reintentar con la misma `Idempotency-Key` devuelve la misma respuesta sin volver a debitar.
-- Si `cuenta_destino` empieza con `FALLA-`, el cliente interbancario fake simula un rechazo del banco destino → la transferencia queda `fallida` y el saldo se compensa (se revierte el débito).
-- Si `monto` supera `STEP_UP_THRESHOLD` (1000 por defecto) y el JWT no trae `acr=step-up` (ni `amr` con `mfa`), responde `403 step_up_required`.
+- Si `destination_account` empieza con `FAIL-`, el cliente interbancario fake simula un rechazo del banco destino → la transferencia queda `failed` y el saldo se compensa (se revierte el débito).
+- Si `amount` supera `STEP_UP_THRESHOLD` (1000 por defecto) y el JWT no trae `acr=step-up` (ni `amr` con `mfa`), responde `403 step_up_required`.
 
 Correr sus tests: `php artisan test` (11 tests, contra el MySQL/Redis/LocalStack reales de `docker-compose`, con cada test envuelto en una transacción que se revierte al final).
 
@@ -226,9 +226,9 @@ php artisan serve --port=8010
 Para probarlo de punta a punta hace falta tener corriendo `svc-datos-basicos` (puerto 8001), `svc-movimientos` (8002) y `svc-transferencias` (8003) — ver sus propias secciones de este README.
 
 Endpoints (todos requieren `Authorization: Bearer <JWT>`):
-- `GET /dashboard/{cuentaId}` — compone Datos Básicos + Movimientos en un solo contrato (el único endpoint que agrega de verdad; los otros dos son pass-through adaptado).
-- `GET /cuentas/{cuentaId}/movimientos` — reenvía a Movimientos.
-- `POST /transferencias` (requiere además `Idempotency-Key`) — reenvía a Transferencias.
+- `GET /dashboard/{accountId}` — compone Datos Básicos + Movimientos en un solo contrato (el único endpoint que agrega de verdad; los otros dos son pass-through adaptado).
+- `GET /accounts/{accountId}/movements` — reenvía a Movimientos.
+- `POST /transfers` (requiere además `Idempotency-Key`) — reenvía a Transferencias.
 
 Correr sus tests: `php artisan test` (9 tests, usando `GuzzleHttp\Handler\MockHandler` para simular los 3 servicios de negocio — opción que permite explícitamente el criterio de aceptación de esta fase, en vez de levantar 3 servidores reales en cada corrida de tests).
 
@@ -246,9 +246,9 @@ php artisan serve --port=8004
 ```
 
 Endpoints:
-- `POST /onboarding` — **sin autenticación** (un cliente nuevo no tiene token todavía; el control de acceso real es la verificación KYC). Body: `{cliente_id, nombre, email, documento_identidad, selfie}`. Con `KYC_DRIVER=fake` (default), cualquier `documento_identidad` que empiece con `RECHAZA-` simula un rechazo del proveedor KYC.
-- `POST /revalidar-liveness` (requiere JWT) — `{selfie_referencia, selfie_nueva}`. Con `LIVENESS_DRIVER=fake` (default), `selfie_nueva: "RECHAZA"` simula una revalidación fallida.
-- `GET /dashboard/{cuentaId}`, `GET /cuentas/{cuentaId}/movimientos`, `POST /transferencias` — igual que en BFF Web.
+- `POST /onboarding` — **sin autenticación** (un cliente nuevo no tiene token todavía; el control de acceso real es la verificación KYC). Body: `{customer_id, name, email, identity_document, selfie}`. Con `KYC_DRIVER=fake` (default), cualquier `identity_document` que empiece con `REJECT-` simula un rechazo del proveedor KYC.
+- `POST /revalidate-liveness` (requiere JWT) — `{reference_selfie, new_selfie}`. Con `LIVENESS_DRIVER=fake` (default), `new_selfie: "REJECT"` simula una revalidación fallida.
+- `GET /dashboard/{accountId}`, `GET /accounts/{accountId}/movements`, `POST /transfers` — igual que en BFF Web.
 
 Correr sus tests: `php artisan test` (11 tests: onboarding aprobado/rechazado/validación/sin-token-necesario, liveness aprobada/rechazada/sin-token, y el dashboard agregado).
 
@@ -271,7 +271,7 @@ npm run dev             # sirve en http://localhost:5173
 
 Requiere `bff-web` corriendo (ver su propia sección) y el `mock-oidc` de `docker-compose` (`make up`) para poder iniciar sesión en local.
 
-Variables de `.env.example`: `VITE_OIDC_ISSUER`, `VITE_OIDC_CLIENT_ID`, `VITE_BFF_WEB_URL`, `VITE_DEMO_CUENTA_ID` (cuenta precargada en el formulario de consulta, solo para demos locales).
+Variables de `.env.example`: `VITE_OIDC_ISSUER`, `VITE_OIDC_CLIENT_ID`, `VITE_BFF_WEB_URL`, `VITE_DEMO_ACCOUNT_ID` (cuenta precargada en el formulario de consulta, solo para demos locales).
 
 Scripts disponibles:
 - `npm run dev` / `npm run build` / `npm run preview`
@@ -279,9 +279,9 @@ Scripts disponibles:
 - `npm run format` / `npm run format:check` — Prettier
 - `npm run test` — Vitest + React Testing Library (8 tests: manejo de la `Idempotency-Key`, pantalla de movimientos, formulario de transferencia incluyendo el reenvío ante rechazo por autenticación reforzada / step-up)
 
-Pantallas: `/login`, `/callback` (retorno del flujo PKCE), `/` (movimientos, protegida), `/transferencias` y `/transferencias/confirmacion` (protegidas).
+Pantallas: `/login`, `/callback` (retorno del flujo PKCE), `/` (movimientos, protegida), `/transfers` y `/transfers/confirmation` (protegidas).
 
-> Nota de verificación: en este entorno no hay herramienta de automatización de navegador disponible, así que la fase se verificó con la suite de tests automatizados más una comprobación real de que `npm run dev` sirve el shell de la SPA y sus rutas cliente (`curl` a `/`, `/login`, `/transferencias`) — no con un recorrido manual de clics en navegador.
+> Nota de verificación: en este entorno no hay herramienta de automatización de navegador disponible, así que la fase se verificó con la suite de tests automatizados más una comprobación real de que `npm run dev` sirve el shell de la SPA y sus rutas cliente (`curl` a `/`, `/login`, `/transfers`) — no con un recorrido manual de clics en navegador.
 
 #### `frontend-mobile` (Fase 10)
 
@@ -296,7 +296,7 @@ npm start               # abre el menú de Expo (i = iOS, a = Android, w = web)
 
 Requiere `bff-mobile` corriendo (ver su propia sección) y el `mock-oidc` de `docker-compose` (`make up`) para poder iniciar sesión.
 
-Variables de `.env.example` (con prefijo `EXPO_PUBLIC_`, que Expo inlinea en build automáticamente — equivalente al `VITE_` de frontend-web): `EXPO_PUBLIC_OIDC_ISSUER`, `EXPO_PUBLIC_OIDC_CLIENT_ID`, `EXPO_PUBLIC_BFF_MOBILE_URL`, `EXPO_PUBLIC_DEMO_CUENTA_ID`.
+Variables de `.env.example` (con prefijo `EXPO_PUBLIC_`, que Expo inlinea en build automáticamente — equivalente al `VITE_` de frontend-web): `EXPO_PUBLIC_OIDC_ISSUER`, `EXPO_PUBLIC_OIDC_CLIENT_ID`, `EXPO_PUBLIC_BFF_MOBILE_URL`, `EXPO_PUBLIC_DEMO_ACCOUNT_ID`.
 
 Scripts disponibles:
 - `npm start` / `npm run ios` / `npm run android` / `npm run web`

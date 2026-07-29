@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\CustomerController;
 use BP\Common\Auth\JwtAuthMiddleware;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/clientes/{clienteId}', [ClienteController::class, 'show'])
+Route::get('/customers/{customerId}', [CustomerController::class, 'show'])
     ->middleware(JwtAuthMiddleware::class);

@@ -5,8 +5,8 @@ namespace App\Contracts;
 interface NotificationChannel
 {
     /**
-     * Envia la notificacion. Debe lanzar NotificationDeliveryException si
-     * el envio falla, para que el DeliveryTracker registre el resultado.
+     * Sends the notification. Must throw NotificationDeliveryException if
+     * the send fails, so the DeliveryTracker records the result.
      */
-    public function send(string $destinatario, string $subject, string $body): void;
+    public function send(string $recipient, string $subject, string $body): void;
 }

@@ -8,9 +8,9 @@ use Aws\Pinpoint\PinpointClient;
 use Throwable;
 
 /**
- * Envia push/SMS via Amazon Pinpoint (decision 3.12). Real para produccion;
- * no se prueba contra LocalStack porque Pinpoint es una funcionalidad de
- * pago (Pro) de LocalStack -- ver decision del driver 'log' para desarrollo.
+ * Sends push/SMS via Amazon Pinpoint (decision 3.12). Real for production;
+ * not tested against LocalStack because Pinpoint is a paid (Pro) LocalStack
+ * feature -- see the 'log' driver decision for development.
  */
 class PinpointNotificationChannel implements NotificationChannel
 {
@@ -21,14 +21,14 @@ class PinpointNotificationChannel implements NotificationChannel
     ) {
     }
 
-    public function send(string $destinatario, string $subject, string $body): void
+    public function send(string $recipient, string $subject, string $body): void
     {
         try {
             $this->client->sendMessages([
                 'ApplicationId' => $this->applicationId,
                 'MessageRequest' => [
                     'Addresses' => [
-                        $destinatario => ['ChannelType' => $this->channelType],
+                        $recipient => ['ChannelType' => $this->channelType],
                     ],
                     'MessageConfiguration' => [
                         'DefaultMessage' => ['Body' => $body],
@@ -36,7 +36,7 @@ class PinpointNotificationChannel implements NotificationChannel
                 ],
             ]);
         } catch (Throwable $e) {
-            throw new NotificationDeliveryException("Pinpoint no pudo enviar el mensaje: {$e->getMessage()}", previous: $e);
+            throw new NotificationDeliveryException("Pinpoint could not send the message: {$e->getMessage()}", previous: $e);
         }
     }
 }

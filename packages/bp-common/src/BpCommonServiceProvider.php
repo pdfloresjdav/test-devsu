@@ -11,12 +11,12 @@ use BP\Common\Auth\JwksCacheInterface;
 use BP\Common\Auth\JwksProviderInterface;
 use BP\Common\Auth\JwtAuthMiddleware;
 use BP\Common\Auth\JwtValidator;
-use BP\Common\Clients\DatosBasicosClient;
-use BP\Common\Clients\HttpDatosBasicosClient;
-use BP\Common\Clients\HttpMovimientosClient;
-use BP\Common\Clients\HttpTransferenciasClient;
-use BP\Common\Clients\MovimientosClient;
-use BP\Common\Clients\TransferenciasClient;
+use BP\Common\Clients\CustomerDataClient;
+use BP\Common\Clients\HttpCustomerDataClient;
+use BP\Common\Clients\HttpMovementsClient;
+use BP\Common\Clients\HttpTransfersClient;
+use BP\Common\Clients\MovementsClient;
+use BP\Common\Clients\TransfersClient;
 use BP\Common\Events\EventBridgeEventPublisher;
 use BP\Common\Events\EventPublisherInterface;
 use BP\Common\Health\HealthCheckController;
@@ -94,19 +94,19 @@ class BpCommonServiceProvider extends ServiceProvider
             'credentials' => $this->resolveAwsCredentials(),
         ]));
 
-        $this->app->singleton(DatosBasicosClient::class, fn ($app) => new HttpDatosBasicosClient(
+        $this->app->singleton(CustomerDataClient::class, fn ($app) => new HttpCustomerDataClient(
             $app->make(ClientInterface::class),
-            config('bp-common.internal_services.datos_basicos_url'),
+            config('bp-common.internal_services.customer_data_url'),
         ));
 
-        $this->app->singleton(MovimientosClient::class, fn ($app) => new HttpMovimientosClient(
+        $this->app->singleton(MovementsClient::class, fn ($app) => new HttpMovementsClient(
             $app->make(ClientInterface::class),
-            config('bp-common.internal_services.movimientos_url'),
+            config('bp-common.internal_services.movements_url'),
         ));
 
-        $this->app->singleton(TransferenciasClient::class, fn ($app) => new HttpTransferenciasClient(
+        $this->app->singleton(TransfersClient::class, fn ($app) => new HttpTransfersClient(
             $app->make(ClientInterface::class),
-            config('bp-common.internal_services.transferencias_url'),
+            config('bp-common.internal_services.transfers_url'),
         ));
     }
 
@@ -115,8 +115,9 @@ class BpCommonServiceProvider extends ServiceProvider
      */
     private function resolveAwsCredentials(): ?array
     {
-        // LocalStack acepta cualquier credencial; en AWS real se debe usar el
-        // IAM Task Role del servicio (decision 3.14) y no definir estas env vars.
+        // LocalStack accepts any credential; on real AWS the service's IAM
+        // Task Role should be used instead (decision 3.14) and these env
+        // vars should not be defined.
         if (! env('AWS_ACCESS_KEY_ID')) {
             return null;
         }

@@ -18,8 +18,8 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    // Los clientes hacia Datos Basicos, Movimientos y Transferencias ya
-    // vienen registrados por BpCommonServiceProvider (packages/bp-common).
+    // The clients toward Customer Data, Movements and Transfers are
+    // already registered by BpCommonServiceProvider (packages/bp-common).
 
     public function register(): void
     {

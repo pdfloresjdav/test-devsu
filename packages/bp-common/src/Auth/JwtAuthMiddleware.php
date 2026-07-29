@@ -8,9 +8,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Resource Server: valida el JWT (y, si esta habilitado, el DPoP proof) de
- * cada request entrante. No implementa login ni emision de tokens -- eso lo
- * hace Auth0/Okta (o el mock-oidc local), tal como exige la decision 3.5.
+ * Resource Server: validates the JWT (and, if enabled, the DPoP proof) of
+ * every incoming request. Doesn't implement login or token issuance --
+ * that's Auth0/Okta's job (or the local mock-oidc), per decision 3.5.
  */
 class JwtAuthMiddleware
 {
@@ -26,7 +26,7 @@ class JwtAuthMiddleware
         $token = $this->extractBearerToken($request);
 
         if ($token === null) {
-            return ApiResponse::error('Falta el header Authorization Bearer.', 'missing_token', status: 401);
+            return ApiResponse::error('Missing Authorization Bearer header.', 'missing_token', status: 401);
         }
 
         try {
@@ -66,7 +66,7 @@ class JwtAuthMiddleware
         $dpopProof = $request->header('DPoP');
 
         if ($dpopProof === null) {
-            return ApiResponse::error('Falta el header DPoP.', 'missing_dpop', status: 401);
+            return ApiResponse::error('Missing DPoP header.', 'missing_dpop', status: 401);
         }
 
         $expectedThumbprint = $claims['cnf']['jkt'] ?? null;

@@ -1,6 +1,6 @@
 {
     "name": "bp/common",
-    "description": "Componentes compartidos entre los microservicios de BP: validacion JWT/DPoP, correlation-id, envelope de respuesta y healthcheck.",
+    "description": "Shared components across BP's microservices: JWT/DPoP validation, correlation-id, response envelope, and healthcheck.",
     "type": "library",
     "license": "proprietary",
     "require": {

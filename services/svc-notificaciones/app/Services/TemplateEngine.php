@@ -6,28 +6,28 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
 /**
- * Genera el contenido de la notificacion segun el tipo de evento (y, en el
- * futuro, el idioma del cliente -- por ahora solo 'es', ver limitacion en
- * el .env.example). Usa vistas Blade en resources/views/notifications/,
- * una por tipo de evento, con un fallback generico.
+ * Generates the notification content based on the event type (and, in the
+ * future, the customer's language -- for now only 'es', see the limitation
+ * in .env.example). Uses Blade views under resources/views/notifications/,
+ * one per event type, with a generic fallback.
  */
 class TemplateEngine
 {
     /**
-     * @param array<string, mixed> $detalle
+     * @param array<string, mixed> $detail
      *
      * @return array{subject: string, body: string}
      */
-    public function render(string $accion, array $detalle, string $locale = 'es'): array
+    public function render(string $action, array $detail, string $locale = 'es'): array
     {
-        $vista = 'notifications.' . Str::kebab($accion);
+        $view = 'notifications.' . Str::kebab($action);
 
-        if (! View::exists($vista)) {
-            $vista = 'notifications.default';
+        if (! View::exists($view)) {
+            $view = 'notifications.default';
         }
 
-        $subject = config("services.notificaciones.subject_map.{$accion}", 'Notificación BP');
-        $body = trim(View::make($vista, ['detalle' => $detalle, 'accion' => $accion])->render());
+        $subject = config("services.notifications.subject_map.{$action}", 'BP Notification');
+        $body = trim(View::make($view, ['detail' => $detail, 'action' => $action])->render());
 
         return ['subject' => $subject, 'body' => $body];
     }

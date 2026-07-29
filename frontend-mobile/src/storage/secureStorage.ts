@@ -2,12 +2,12 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 /**
- * `expo-secure-store` (Keychain en iOS / Keystore en Android) no tiene
- * implementación en web. El fallback a `localStorage` en web es solo para
- * poder ejercitar el flujo completo con `expo start --web` en este entorno
- * (sin Xcode/Android Studio disponibles) — no ofrece la misma garantía de
- * seguridad que el almacenamiento nativo y no debe tomarse como la
- * verificación real de esta fase, solo como humo (smoke test).
+ * `expo-secure-store` (Keychain on iOS / Keystore on Android) has no
+ * implementation on web. The `localStorage` fallback on web is only to be
+ * able to exercise the full flow with `expo start --web` in this
+ * environment (without Xcode/Android Studio available) -- it doesn't offer
+ * the same security guarantee as native storage and shouldn't be taken as
+ * this phase's real verification, only as a smoke test.
  */
 export async function setSecureItem(key: string, value: string): Promise<void> {
   if (Platform.OS === 'web') {

@@ -1,12 +1,11 @@
-# Se construye con el contexto en la RAIZ del monorepo, para poder copiar
-# packages/bp-common (dependencia local via path-repository):
+# Built with the context at the monorepo ROOT, to be able to copy
+# packages/bp-common (local dependency via path-repository):
 #   docker build -f services/svc-auditoria/Dockerfile -t bp/svc-auditoria .
 #
-# A diferencia de los servicios HTTP (BFFs, Datos Basicos, Movimientos,
-# Transferencias), este es un worker puro: no sirve trafico HTTP, asi que
-# no necesita Octane/Swoole -- el proceso principal del contenedor es el
-# comando de consumo de SQS (equivalente a un "Laravel Horizon Worker" del
-# diagrama de contenedores).
+# Unlike the HTTP services (BFFs, Customer Data, Movements, Transfers),
+# this is a pure worker: it doesn't serve HTTP traffic, so it doesn't need
+# Octane/Swoole -- the container's main process is the SQS consume command
+# (equivalent to a "Laravel Horizon Worker" in the container diagram).
 
 FROM php:8.3-cli AS base
 
@@ -27,7 +26,7 @@ WORKDIR /app/services/svc-auditoria
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
     && composer dump-autoload --optimize
 
-# migrate/audit:setup-infrastructure son idempotentes -- se corren en cada
-# arranque para que `docker compose up` deje la cola SQS+DLQ, la regla de
-# EventBridge, la tabla DynamoDB y el bucket S3 listos sin un paso manual.
+# migrate/audit:setup-infrastructure are idempotent -- run on every startup
+# so `docker compose up` leaves the SQS queue+DLQ, the EventBridge rule,
+# the DynamoDB table and the S3 bucket ready without any manual step.
 CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan audit:setup-infrastructure && php artisan audit:consume"]

@@ -7,23 +7,23 @@ use Tests\TestCase;
 
 class TemplateEngineTest extends TestCase
 {
-    public function test_genera_el_contenido_para_un_movimiento_registrado(): void
+    public function test_generates_the_content_for_a_registered_movement(): void
     {
-        $resultado = (new TemplateEngine())->render('MovementRegistered', [
-            'cuenta_id' => 'CUENTA-1',
-            'tipo' => 'debito',
-            'monto' => 150,
+        $result = (new TemplateEngine())->render('MovementRegistered', [
+            'account_id' => 'ACCOUNT-1',
+            'type' => 'debit',
+            'amount' => 150,
         ]);
 
-        $this->assertSame('Nuevo movimiento en tu cuenta BP', $resultado['subject']);
-        $this->assertStringContainsString('CUENTA-1', $resultado['body']);
-        $this->assertStringContainsString('150.00', $resultado['body']);
+        $this->assertSame('New movement on your BP account', $result['subject']);
+        $this->assertStringContainsString('ACCOUNT-1', $result['body']);
+        $this->assertStringContainsString('150.00', $result['body']);
     }
 
-    public function test_usa_la_plantilla_generica_para_un_evento_sin_plantilla_propia(): void
+    public function test_uses_the_generic_template_for_an_event_without_its_own_template(): void
     {
-        $resultado = (new TemplateEngine())->render('EventoDesconocido', []);
+        $result = (new TemplateEngine())->render('UnknownEvent', []);
 
-        $this->assertStringContainsString('EventoDesconocido', $resultado['body']);
+        $this->assertStringContainsString('UnknownEvent', $result['body']);
     }
 }

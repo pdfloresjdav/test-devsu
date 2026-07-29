@@ -3,9 +3,9 @@ import { AuthProvider } from './auth/AuthProvider';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { CallbackPage } from './pages/CallbackPage';
-import { MovimientosPage } from './pages/MovimientosPage';
-import { TransferenciaPage } from './pages/TransferenciaPage';
-import { ConfirmacionPage } from './pages/ConfirmacionPage';
+import { MovementsPage } from './pages/MovementsPage';
+import { TransferPage } from './pages/TransferPage';
+import { ConfirmationPage } from './pages/ConfirmationPage';
 
 function App() {
   return (
@@ -18,23 +18,23 @@ function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <MovimientosPage />
+                <MovementsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/transferencias"
+            path="/transfers"
             element={
               <ProtectedRoute>
-                <TransferenciaPage />
+                <TransferPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/transferencias/confirmacion"
+            path="/transfers/confirmation"
             element={
               <ProtectedRoute>
-                <ConfirmacionPage />
+                <ConfirmationPage />
               </ProtectedRoute>
             }
           />

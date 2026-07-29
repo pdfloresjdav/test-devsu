@@ -5,13 +5,13 @@ namespace App\Contracts;
 interface IdentityProviderClient
 {
     /**
-     * Crea la identidad del nuevo cliente en el proveedor de identidad
-     * (diagrama de secuencia 8.2: "BFF->>IdP: Crea identidad de usuario
-     * -Management API-"). El registro de la credencial de acceso en si
-     * -usuario/clave o WebAuthn- lo hace la app directamente contra el
-     * IdP despues de esto, no el BFF.
+     * Creates the new customer's identity in the identity provider
+     * (sequence diagram 8.2: "BFF->>IdP: Create user identity -Management
+     * API-"). Registering the access credential itself -username/password
+     * or WebAuthn- is done by the app directly against the IdP after this,
+     * not the BFF.
      *
-     * @return array{usuario_id: string}
+     * @return array{user_id: string}
      */
-    public function crearUsuario(string $clienteId, string $nombre, string $email): array;
+    public function createUser(string $customerId, string $name, string $email): array;
 }

@@ -5,7 +5,7 @@ export function LoginPage() {
   const { isAuthenticated, isLoading, login } = useAuth();
 
   if (isLoading) {
-    return <p>Cargando…</p>;
+    return <p>Loading…</p>;
   }
 
   if (isAuthenticated) {
@@ -14,9 +14,9 @@ export function LoginPage() {
 
   return (
     <main>
-      <h1>Banca Digital BP</h1>
-      <p>Iniciá sesión para consultar tus movimientos y hacer transferencias.</p>
-      <button onClick={login}>Iniciar sesión</button>
+      <h1>BP Digital Banking</h1>
+      <p>Log in to check your movements and make transfers.</p>
+      <button onClick={login}>Log in</button>
     </main>
   );
 }

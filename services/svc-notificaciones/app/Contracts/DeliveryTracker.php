@@ -5,8 +5,8 @@ namespace App\Contracts;
 interface DeliveryTracker
 {
     /**
-     * Registra el resultado del intento de entrega -- evidencia de que el
-     * cliente fue notificado (o de que fallo), exigida por la norma.
+     * Records the outcome of a delivery attempt -- evidence that the
+     * customer was notified (or that it failed), required by the standard.
      */
-    public function registrar(string $actor, string $canal, string $accion, string $estado, ?string $motivoFalla = null): void;
+    public function register(string $actor, string $channel, string $action, string $status, ?string $failureReason = null): void;
 }

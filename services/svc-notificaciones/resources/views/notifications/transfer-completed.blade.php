@@ -1,1 +1,1 @@
-Tu transferencia de {{ number_format((float) ($detalle['monto'] ?? 0), 2) }} desde la cuenta {{ $detalle['cuenta_origen'] ?? '' }} hacia {{ $detalle['cuenta_destino'] ?? '' }} se completó correctamente.
+Your transfer of {{ number_format((float) ($detail['amount'] ?? 0), 2) }} from account {{ $detail['source_account'] ?? '' }} to {{ $detail['destination_account'] ?? '' }} completed successfully.

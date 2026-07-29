@@ -3,9 +3,9 @@ import { Navigate } from 'react-router-dom';
 import { userManager } from '../auth/oidcConfig';
 
 /**
- * Recibe la redireccion de vuelta del emisor OIDC con el authorization
- * code, e intercambia code + code_verifier (PKCE) por los tokens --
- * oidc-client-ts hace este intercambio, no se reimplementa a mano.
+ * Receives the redirect back from the OIDC issuer with the authorization
+ * code, and exchanges code + code_verifier (PKCE) for the tokens --
+ * oidc-client-ts does this exchange, it's not reimplemented by hand.
  */
 export function CallbackPage() {
   const [status, setStatus] = useState<'processing' | 'done' | 'error'>('processing');
@@ -18,11 +18,11 @@ export function CallbackPage() {
   }, []);
 
   if (status === 'processing') {
-    return <p>Completando el inicio de sesión…</p>;
+    return <p>Completing login…</p>;
   }
 
   if (status === 'error') {
-    return <p>No se pudo completar el inicio de sesión. Volvé a intentarlo.</p>;
+    return <p>Could not complete login. Please try again.</p>;
   }
 
   return <Navigate to="/" replace />;

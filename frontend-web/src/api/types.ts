@@ -1,31 +1,31 @@
-export interface Cliente {
-  cliente_id: string;
-  nombre: string;
-  documento?: string;
-  segmento?: string;
-  contacto?: { email?: string; telefono?: string };
+export interface Customer {
+  customer_id: string;
+  name: string;
+  document?: string;
+  segment?: string;
+  contact?: { email?: string; phone?: string };
 }
 
-export interface Movimiento {
-  movimiento_id: string;
-  cuenta_id: string;
-  tipo: string;
-  monto: number;
-  descripcion: string;
-  fecha: string;
+export interface Movement {
+  movement_id: string;
+  account_id: string;
+  type: string;
+  amount: number;
+  description: string;
+  date: string;
 }
 
 export interface Dashboard {
-  cliente: Cliente;
-  movimientos_recientes: Movimiento[];
+  customer: Customer;
+  recent_movements: Movement[];
 }
 
-export interface Transferencia {
-  transferencia_id: string;
-  cuenta_origen: string;
-  cuenta_destino: string;
-  monto: number;
-  descripcion?: string | null;
-  estado: 'completada' | 'fallida' | 'pendiente';
-  motivo_falla?: string | null;
+export interface Transfer {
+  transfer_id: string;
+  source_account: string;
+  destination_account: string;
+  amount: number;
+  description?: string | null;
+  status: 'completed' | 'failed' | 'pending';
+  failure_reason?: string | null;
 }

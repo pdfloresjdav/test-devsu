@@ -8,10 +8,10 @@ use Aws\Ses\SesClient;
 use Throwable;
 
 /**
- * Envia email transaccional via Amazon SES (decision 3.12). Real para
- * produccion; SES si tiene soporte basico en LocalStack community, pero se
- * mantiene detras del mismo driver 'aws' para no acoplar el dominio a un
- * proveedor especifico.
+ * Sends transactional email via Amazon SES (decision 3.12). Real for
+ * production; SES does have basic support in LocalStack community, but it
+ * stays behind the same 'aws' driver to avoid coupling the domain to a
+ * specific provider.
  */
 class SesNotificationChannel implements NotificationChannel
 {
@@ -21,19 +21,19 @@ class SesNotificationChannel implements NotificationChannel
     ) {
     }
 
-    public function send(string $destinatario, string $subject, string $body): void
+    public function send(string $recipient, string $subject, string $body): void
     {
         try {
             $this->client->sendEmail([
                 'Source' => $this->fromAddress,
-                'Destination' => ['ToAddresses' => [$destinatario]],
+                'Destination' => ['ToAddresses' => [$recipient]],
                 'Message' => [
                     'Subject' => ['Data' => $subject],
                     'Body' => ['Text' => ['Data' => $body]],
                 ],
             ]);
         } catch (Throwable $e) {
-            throw new NotificationDeliveryException("SES no pudo enviar el email: {$e->getMessage()}", previous: $e);
+            throw new NotificationDeliveryException("SES could not send the email: {$e->getMessage()}", previous: $e);
         }
     }
 }

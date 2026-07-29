@@ -16,10 +16,10 @@ interface BffRequestOptions extends RequestInit {
 }
 
 /**
- * Cliente hacia el BFF Web. Nunca guarda el token: lo recibe explicito en
- * cada llamada (viene del AuthProvider) para que quede claro que es el
- * mismo JWT del usuario el que se reenvia -- el BFF, a su vez, lo reenvia
- * tal cual a los microservicios internos (decision 3.5).
+ * Client toward the BFF Web. Never stores the token: it receives it
+ * explicitly on each call (comes from AuthProvider) to make it clear that
+ * it's the same user JWT being forwarded -- the BFF, in turn, forwards it
+ * as-is to the internal microservices (decision 3.5).
  */
 export async function bffFetch<T>(path: string, options: BffRequestOptions): Promise<T> {
   const { accessToken, idempotencyKey, headers, ...rest } = options;

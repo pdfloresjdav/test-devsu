@@ -8,21 +8,21 @@ use Illuminate\Console\Command;
 use Throwable;
 
 /**
- * Consumidor de la cola SQS de Notificaciones (misma cola de eventos de
- * dominio que Auditoria, pero con su PROPIA cola/regla de EventBridge --
- * patron Pub/Sub con Competing Consumers, decision 3.13: cada consumidor
- * tiene su copia independiente de cada evento). Ver la nota sobre
- * Horizon/worker puro en CLAUDE.md y en svc-auditoria.
+ * Consumer for Notifications' SQS queue (the same domain events as Audit,
+ * but with its OWN EventBridge queue/rule -- Pub/Sub with Competing
+ * Consumers pattern, decision 3.13: each consumer has its own independent
+ * copy of every event). See the note about Horizon/pure-worker in
+ * CLAUDE.md and in svc-auditoria.
  */
 class ConsumeNotificationEvents extends Command
 {
-    protected $signature = 'notifications:consume {--once : Procesa un unico ciclo de recepcion y termina (para tests/depuracion)}';
+    protected $signature = 'notifications:consume {--once : Process a single receive cycle and exit (for tests/debugging)}';
 
-    protected $description = 'Consume eventos de dominio desde SQS y despacha las notificaciones correspondientes';
+    protected $description = 'Consumes domain events from SQS and dispatches the corresponding notifications';
 
     public function handle(SqsClient $sqs, NotificationEventProcessor $processor): int
     {
-        $queueUrl = config('services.notificaciones.queue_url');
+        $queueUrl = config('services.notifications.queue_url');
 
         do {
             $result = $sqs->receiveMessage([
@@ -32,7 +32,7 @@ class ConsumeNotificationEvents extends Command
             ]);
 
             foreach ($result['Messages'] ?? [] as $message) {
-                $this->procesarMensaje($sqs, $queueUrl, $message, $processor);
+                $this->processMessage($sqs, $queueUrl, $message, $processor);
             }
         } while (! $this->option('once'));
 
@@ -42,20 +42,20 @@ class ConsumeNotificationEvents extends Command
     /**
      * @param array<string, mixed> $message
      */
-    private function procesarMensaje(SqsClient $sqs, string $queueUrl, array $message, NotificationEventProcessor $processor): void
+    private function processMessage(SqsClient $sqs, string $queueUrl, array $message, NotificationEventProcessor $processor): void
     {
         try {
-            $evento = json_decode($message['Body'], true, flags: JSON_THROW_ON_ERROR);
-            $processor->procesar($evento);
+            $event = json_decode($message['Body'], true, flags: JSON_THROW_ON_ERROR);
+            $processor->process($event);
 
             $sqs->deleteMessage([
                 'QueueUrl' => $queueUrl,
                 'ReceiptHandle' => $message['ReceiptHandle'],
             ]);
 
-            $this->info("Notificado: {$evento['detail-type']} ({$message['MessageId']})");
+            $this->info("Notified: {$event['detail-type']} ({$message['MessageId']})");
         } catch (Throwable $e) {
-            $this->error("No se pudo procesar el mensaje {$message['MessageId']}: {$e->getMessage()}");
+            $this->error("Could not process message {$message['MessageId']}: {$e->getMessage()}");
         }
     }
 }

@@ -6,18 +6,19 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Envuelve una falla de un servicio de negocio interno, preservando el
- * status code para que el BFF que la reciba pueda decidir como
- * traducirla al cliente (en vez de siempre devolver un 502 generico).
+ * Wraps a failure from an internal business service, preserving the
+ * status code so the BFF that receives it can decide how to translate it
+ * to the client (instead of always returning a generic 502).
  *
- * Tambien preserva el `errorCode` de negocio del servicio interno (ej.
- * "step_up_required" de svc-transferencias) cuando el body de error lo
- * trae -- sin esto, HandlesUpstreamErrors lo aplanaba a un generico
- * "upstream_error" y el unico dato que le quedaba al frontend para
- * distinguir un rechazo por step-up de cualquier otro error 403/422 era
- * el texto del mensaje, algo fragil para armar logica de negocio encima.
- * Se llama `errorCode` (no `code`) porque `Exception::$code` ya existe en
- * la clase base -- redeclararlo como readonly rompe con un fatal error.
+ * Also preserves the internal service's business `errorCode` (e.g.
+ * "step_up_required" from svc-transferencias) when the error body carries
+ * one -- without this, HandlesUpstreamErrors flattened it to a generic
+ * "upstream_error" and the only thing left for the frontend to
+ * distinguish a step-up rejection from any other 403/422 error was the
+ * message text, which is fragile to build business logic on top of.
+ * It's called `errorCode` (not `code`) because `Exception::$code` already
+ * exists on the base class -- redeclaring it as readonly causes a fatal
+ * error.
  */
 class UpstreamServiceException extends RuntimeException
 {

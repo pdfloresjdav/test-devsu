@@ -6,7 +6,7 @@ use BP\Common\Tests\TestCase;
 
 class HealthCheckTest extends TestCase
 {
-    public function test_get_health_responde_ok_sin_configuracion_adicional(): void
+    public function test_get_health_responds_ok_without_additional_configuration(): void
     {
         $this->getJson('/health')
             ->assertStatus(200)

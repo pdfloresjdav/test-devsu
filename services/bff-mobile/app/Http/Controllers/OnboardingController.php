@@ -9,10 +9,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * A proposito NO esta protegido con JwtAuthMiddleware: un cliente nuevo
- * todavia no tiene token. La verificacion KYC es el control de acceso real
- * de este endpoint. En un sistema en produccion se sumaria ademas
- * atestacion de la app / rate limiting -- fuera del alcance de esta fase.
+ * Deliberately NOT protected with JwtAuthMiddleware: a new customer doesn't
+ * have a token yet. KYC verification is the real access control for this
+ * endpoint. A production system would also add app attestation / rate
+ * limiting -- out of scope for this phase.
  */
 class OnboardingController extends Controller
 {
@@ -23,25 +23,25 @@ class OnboardingController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'cliente_id' => ['required', 'string'],
-            'nombre' => ['required', 'string'],
+            'customer_id' => ['required', 'string'],
+            'name' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'documento_identidad' => ['required', 'string'],
+            'identity_document' => ['required', 'string'],
             'selfie' => ['required', 'string'],
         ]);
 
         try {
-            $resultado = $this->onboarding->onboardear(
-                $validated['cliente_id'],
-                $validated['nombre'],
+            $result = $this->onboarding->onboard(
+                $validated['customer_id'],
+                $validated['name'],
                 $validated['email'],
-                $validated['documento_identidad'],
+                $validated['identity_document'],
                 $validated['selfie'],
             );
         } catch (OnboardingRejectedException $e) {
-            return ApiResponse::error($e->getMessage(), 'onboarding_rechazado', status: 422);
+            return ApiResponse::error($e->getMessage(), 'onboarding_rejected', status: 422);
         }
 
-        return ApiResponse::success($resultado, status: 201);
+        return ApiResponse::success($result, status: 201);
     }
 }

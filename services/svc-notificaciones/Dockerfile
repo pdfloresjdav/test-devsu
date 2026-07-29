@@ -1,9 +1,9 @@
-# Se construye con el contexto en la RAIZ del monorepo, para poder copiar
-# packages/bp-common (dependencia local via path-repository):
+# Built with the context at the monorepo ROOT, to be able to copy
+# packages/bp-common (local dependency via path-repository):
 #   docker build -f services/svc-notificaciones/Dockerfile -t bp/svc-notificaciones .
 #
-# Worker puro, igual que svc-auditoria: no sirve HTTP, no necesita
-# Octane/Swoole. El proceso principal es el comando de consumo de SQS.
+# Pure worker, same as svc-auditoria: doesn't serve HTTP, doesn't need
+# Octane/Swoole. The main process is the SQS consume command.
 
 FROM php:8.3-cli AS base
 
@@ -24,7 +24,7 @@ WORKDIR /app/services/svc-notificaciones
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
     && composer dump-autoload --optimize
 
-# migrate/notifications:setup-infrastructure son idempotentes -- se corren
-# en cada arranque para dejar su propia cola SQS+DLQ, regla de EventBridge
-# y tabla DynamoDB listas sin un paso manual aparte.
+# migrate/notifications:setup-infrastructure are idempotent -- run on every
+# startup to leave its own SQS queue+DLQ, EventBridge rule and DynamoDB
+# table ready without any extra manual step.
 CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan notifications:setup-infrastructure && php artisan notifications:consume"]

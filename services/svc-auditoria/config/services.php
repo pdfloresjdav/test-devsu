@@ -35,13 +35,13 @@ return [
         ],
     ],
 
-    'auditoria' => [
-        'table' => env('AUDITORIA_TABLE', 'auditoria'),
-        'bucket' => env('AUDITORIA_BUCKET', 'bp-auditoria-worm'),
-        'queue_name' => env('AUDITORIA_QUEUE_NAME', 'audit-events-queue'),
-        'dlq_name' => env('AUDITORIA_DLQ_NAME', 'audit-events-dlq'),
-        'rule_name' => env('AUDITORIA_RULE_NAME', 'audit-all-domain-events'),
-        'queue_url' => env('AUDITORIA_QUEUE_URL'),
+    'audit' => [
+        'table' => env('AUDIT_TABLE', 'audit'),
+        'bucket' => env('AUDIT_BUCKET', 'bp-audit-worm'),
+        'queue_name' => env('AUDIT_QUEUE_NAME', 'audit-events-queue'),
+        'dlq_name' => env('AUDIT_DLQ_NAME', 'audit-events-dlq'),
+        'rule_name' => env('AUDIT_RULE_NAME', 'audit-all-domain-events'),
+        'queue_url' => env('AUDIT_QUEUE_URL'),
         's3_endpoint' => env('AWS_S3_ENDPOINT', env('AWS_ENDPOINT_URL')),
         's3_region' => env('AWS_REGION', 'us-east-1'),
     ],

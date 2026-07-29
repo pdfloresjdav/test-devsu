@@ -5,7 +5,7 @@ namespace BP\Common\Auth;
 interface JwksProviderInterface
 {
     /**
-     * Devuelve el JWK Set (formato RFC 7517) del emisor dado.
+     * Returns the JWK Set (RFC 7517 format) of the given issuer.
      *
      * @return array<string, mixed>
      */

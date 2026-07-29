@@ -1,5 +1,5 @@
-# Se construye con el contexto en la RAIZ del monorepo, para poder copiar
-# packages/bp-common (dependencia local via path-repository):
+# Built with the context at the monorepo ROOT, to be able to copy
+# packages/bp-common (local dependency via path-repository):
 #   docker build -f services/svc-movimientos/Dockerfile -t bp/svc-movimientos .
 
 FROM php:8.3-cli AS base
@@ -25,7 +25,7 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
 
 EXPOSE 8000
 
-# migrate/movimientos:setup-table/events:setup-bus son idempotentes -- se
-# corren en cada arranque para que `docker compose up` deje la tabla
-# DynamoDB y el bus de EventBridge listos sin un paso manual aparte.
-CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan movimientos:setup-table && php artisan events:setup-bus && php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000"]
+# migrate/movements:setup-table/events:setup-bus are idempotent -- run on
+# every startup so `docker compose up` leaves the DynamoDB table and the
+# EventBridge bus ready without any extra manual step.
+CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan movements:setup-table && php artisan events:setup-bus && php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000"]

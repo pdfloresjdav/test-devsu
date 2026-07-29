@@ -6,9 +6,9 @@ use Aws\EventBridge\EventBridgeClient;
 use Throwable;
 
 /**
- * Publica eventos de dominio en Amazon EventBridge. El mismo cliente sirve
- * para LocalStack en desarrollo (con endpoint propio) y para AWS real en
- * produccion -- solo cambia la configuracion del cliente, no el codigo.
+ * Publishes domain events to Amazon EventBridge. The same client works
+ * for LocalStack in development (with its own endpoint) and for real AWS
+ * in production -- only the client configuration changes, not the code.
  */
 class EventBridgeEventPublisher implements EventPublisherInterface
 {
@@ -33,12 +33,12 @@ class EventBridgeEventPublisher implements EventPublisherInterface
                 ],
             ]);
         } catch (Throwable $e) {
-            throw new EventPublishingException("No se pudo publicar el evento [{$detailType}]: {$e->getMessage()}", previous: $e);
+            throw new EventPublishingException("Could not publish event [{$detailType}]: {$e->getMessage()}", previous: $e);
         }
 
         if (($result['FailedEntryCount'] ?? 0) > 0) {
-            $reason = $result['Entries'][0]['ErrorMessage'] ?? 'motivo desconocido';
-            throw new EventPublishingException("EventBridge rechazo el evento [{$detailType}]: {$reason}");
+            $reason = $result['Entries'][0]['ErrorMessage'] ?? 'unknown reason';
+            throw new EventPublishingException("EventBridge rejected event [{$detailType}]: {$reason}");
         }
     }
 }

@@ -8,8 +8,8 @@ use Aws\DynamoDb\Marshaler;
 use Illuminate\Support\Str;
 
 /**
- * Persiste el estado de entrega de cada notificacion en DynamoDB (mismo
- * patron local/AWS real que el resto del proyecto). Clave: actor
+ * Persists the delivery status of each notification in DynamoDB (same
+ * local/real-AWS pattern as the rest of the project). Key: actor
  * (partition) + sort_key = "timestamp#delivery_id" (range).
  */
 class DynamoDbDeliveryTracker implements DeliveryTracker
@@ -21,7 +21,7 @@ class DynamoDbDeliveryTracker implements DeliveryTracker
     ) {
     }
 
-    public function registrar(string $actor, string $canal, string $accion, string $estado, ?string $motivoFalla = null): void
+    public function register(string $actor, string $channel, string $action, string $status, ?string $failureReason = null): void
     {
         $timestamp = now()->toIso8601ZuluString('microsecond');
         $deliveryId = (string) Str::uuid();
@@ -32,10 +32,10 @@ class DynamoDbDeliveryTracker implements DeliveryTracker
                 'actor' => $actor,
                 'sort_key' => "{$timestamp}#{$deliveryId}",
                 'delivery_id' => $deliveryId,
-                'canal' => $canal,
-                'accion' => $accion,
-                'estado' => $estado,
-                'motivo_falla' => $motivoFalla,
+                'channel' => $channel,
+                'action' => $action,
+                'status' => $status,
+                'failure_reason' => $failureReason,
                 'timestamp' => $timestamp,
             ]),
         ]);

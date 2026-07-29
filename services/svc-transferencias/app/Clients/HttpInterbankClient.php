@@ -8,9 +8,9 @@ use GuzzleHttp\ClientInterface;
 use Throwable;
 
 /**
- * Implementacion real: llama a la red/switch interbancario por HTTP (mTLS
- * en produccion, terminado en el balanceador/gateway de salida). Se activa
- * con INTERBANK_DRIVER=http + INTERBANK_BASE_URL en el .env.
+ * Real implementation: calls the interbank network/switch over HTTP (mTLS
+ * in production, terminated at the outbound load balancer/gateway).
+ * Activated with INTERBANK_DRIVER=http + INTERBANK_BASE_URL in .env.
  */
 class HttpInterbankClient implements InterbankClient
 {
@@ -20,14 +20,14 @@ class HttpInterbankClient implements InterbankClient
     ) {
     }
 
-    public function ejecutar(string $cuentaDestino, float $monto): array
+    public function execute(string $destinationAccount, float $amount): array
     {
         try {
             $response = $this->httpClient->request('POST', rtrim($this->baseUrl, '/') . '/transfer', [
-                'json' => ['cuenta_destino' => $cuentaDestino, 'monto' => $monto],
+                'json' => ['destination_account' => $destinationAccount, 'amount' => $amount],
             ]);
         } catch (Throwable $e) {
-            throw new InterbankException("El banco destino no respondio: {$e->getMessage()}", previous: $e);
+            throw new InterbankException("The destination bank did not respond: {$e->getMessage()}", previous: $e);
         }
 
         return json_decode((string) $response->getBody(), true);

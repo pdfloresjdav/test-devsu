@@ -7,16 +7,16 @@ use Tests\TestCase;
 
 class DashboardControllerTest extends TestCase
 {
-    public function test_rechaza_sin_token(): void
+    public function test_rejects_without_token(): void
     {
         $this->getJson('/dashboard/1001')->assertStatus(401);
     }
 
-    public function test_agrega_cliente_y_movimientos_en_un_solo_contrato(): void
+    public function test_composes_customer_and_movements_into_a_single_contract(): void
     {
         $this->mockHandler->append(
-            new Response(200, [], json_encode(['data' => ['cliente_id' => '1001', 'nombre' => 'Ana Torres']])),
-            new Response(200, [], json_encode(['data' => [['movimiento_id' => 'm1', 'monto' => 10]]])),
+            new Response(200, [], json_encode(['data' => ['customer_id' => '1001', 'name' => 'Ana Torres']])),
+            new Response(200, [], json_encode(['data' => [['movement_id' => 'm1', 'amount' => 10]]])),
         );
 
         $token = $this->signToken();
@@ -24,7 +24,7 @@ class DashboardControllerTest extends TestCase
         $this->withHeader('Authorization', "Bearer {$token}")
             ->getJson('/dashboard/1001')
             ->assertStatus(200)
-            ->assertJsonPath('data.cliente.nombre', 'Ana Torres')
-            ->assertJsonPath('data.movimientos_recientes.0.movimiento_id', 'm1');
+            ->assertJsonPath('data.customer.name', 'Ana Torres')
+            ->assertJsonPath('data.recent_movements.0.movement_id', 'm1');
     }
 }

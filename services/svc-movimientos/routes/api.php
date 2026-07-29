@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\MovimientoController;
+use App\Http\Controllers\MovementController;
 use BP\Common\Auth\JwtAuthMiddleware;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(JwtAuthMiddleware::class)->group(function () {
-    Route::get('/cuentas/{cuentaId}/movimientos', [MovimientoController::class, 'index']);
-    Route::post('/cuentas/{cuentaId}/movimientos', [MovimientoController::class, 'store']);
+    Route::get('/accounts/{accountId}/movements', [MovementController::class, 'index']);
+    Route::post('/accounts/{accountId}/movements', [MovementController::class, 'store']);
 });

@@ -2,14 +2,14 @@ import { Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 /**
- * `expo-local-authentication` no tiene implementación en web, y Face ID en
- * iOS no funciona dentro de Expo Go (requiere un development build) — ver
- * WORKLOG.md. En este entorno no hay Xcode Simulator ni emulador de
- * Android para probar la biometría real, así que en web se trata como "no
- * disponible" en vez de simularla: el flujo de login recurrente cae al
- * refresh silencioso sin gate biométrico, dejando documentado que la
- * verificación de la biometría real queda pendiente de un dispositivo o
- * development build real.
+ * `expo-local-authentication` has no implementation on web, and Face ID on
+ * iOS doesn't work inside Expo Go (requires a development build) -- see
+ * WORKLOG.md. There's no Xcode Simulator or Android emulator in this
+ * environment to test real biometrics, so on web it's treated as "not
+ * available" instead of simulating it: the recurring login flow falls
+ * back to the silent refresh without the biometric gate, documenting that
+ * verifying real biometrics is pending a real device or development
+ * build.
  */
 export async function isBiometricAvailable(): Promise<boolean> {
   if (Platform.OS === 'web') {

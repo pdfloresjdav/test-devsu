@@ -8,11 +8,11 @@ use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Propaga (o genera) un X-Correlation-Id por request, para poder rastrear
- * una operacion a traves de SPA/App -> BFF -> microservicios -> eventos
- * asincronos (Auditoria, Notificaciones). Necesario porque AWS X-Ray traza
- * la infraestructura, pero este id de negocio es el que aparece en logs
- * aplicativos y en el propio registro de auditoria.
+ * Propagates (or generates) an X-Correlation-Id per request, to be able to
+ * trace an operation across SPA/App -> BFF -> microservices -> async
+ * events (Audit, Notifications). Needed because AWS X-Ray traces the
+ * infrastructure, but this business id is the one that shows up in
+ * application logs and in the audit record itself.
  */
 class CorrelationIdMiddleware
 {

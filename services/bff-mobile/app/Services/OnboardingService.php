@@ -8,19 +8,19 @@ use App\Contracts\OnboardingRejectedException;
 use BP\Common\Events\EventPublisherInterface;
 
 /**
- * Orquesta el onboarding (diagrama de secuencia 8.2): verifica identidad
- * con el proveedor KYC y, si se aprueba, crea la identidad del cliente en
- * el proveedor de identidad. El registro de la credencial de acceso
- * (usuario/clave o WebAuthn) lo hace la app directamente contra el IdP
- * despues de esto, no el BFF.
+ * Orchestrates onboarding (sequence diagram 8.2): verifies identity with
+ * the KYC provider and, if approved, creates the customer's identity in
+ * the identity provider. Registering the access credential (username/
+ * password or WebAuthn) is done by the app directly against the IdP after
+ * this, not the BFF.
  *
- * Simplificacion de alcance respecto al diagrama de secuencia: no se
- * valida la existencia del cliente en el Core Bancario antes de crear la
- * identidad -- esa llamada requeriria que el BFF se autentique como
- * servicio (client_credentials) en vez de con el JWT del usuario final
- * (que en onboarding todavia no existe), un flujo de autenticacion
- * maquina-a-maquina completo que el checklist de esta fase no pide. Queda
- * documentado aqui para no perderlo de vista si se retoma mas adelante.
+ * Scope simplification versus the sequence diagram: the customer's
+ * existence in Core Banking is not validated before creating the identity
+ * -- that call would require the BFF to authenticate as a service
+ * (client_credentials) instead of with the end user's JWT (which doesn't
+ * exist yet during onboarding), a full machine-to-machine authentication
+ * flow this phase's checklist doesn't ask for. Documented here so it isn't
+ * lost track of if it's picked up later.
  */
 class OnboardingService
 {
@@ -32,35 +32,35 @@ class OnboardingService
     }
 
     /**
-     * @return array{usuario_id: string, estado: string}
+     * @return array{user_id: string, status: string}
      */
-    public function onboardear(
-        string $clienteId,
-        string $nombre,
+    public function onboard(
+        string $customerId,
+        string $name,
         string $email,
-        string $documentoIdentidad,
+        string $identityDocument,
         string $selfie,
     ): array {
-        $resultadoKyc = $this->kyc->verificar($documentoIdentidad, $selfie);
+        $kycResult = $this->kyc->verify($identityDocument, $selfie);
 
-        if (! $resultadoKyc['aprobado']) {
+        if (! $kycResult['approved']) {
             $this->events->publish('OnboardingRejected', [
-                'actor' => $clienteId,
-                'cliente_id' => $clienteId,
-                'motivo' => $resultadoKyc['motivo'],
+                'actor' => $customerId,
+                'customer_id' => $customerId,
+                'reason' => $kycResult['reason'],
             ]);
 
-            throw new OnboardingRejectedException($resultadoKyc['motivo'] ?? 'Verificación de identidad rechazada');
+            throw new OnboardingRejectedException($kycResult['reason'] ?? 'Identity verification rejected');
         }
 
-        $identidad = $this->identity->crearUsuario($clienteId, $nombre, $email);
+        $identity = $this->identity->createUser($customerId, $name, $email);
 
         $this->events->publish('OnboardingCompleted', [
-            'actor' => $clienteId,
-            'cliente_id' => $clienteId,
-            'usuario_id' => $identidad['usuario_id'],
+            'actor' => $customerId,
+            'customer_id' => $customerId,
+            'user_id' => $identity['user_id'],
         ]);
 
-        return ['usuario_id' => $identidad['usuario_id'], 'estado' => 'aprobado'];
+        return ['user_id' => $identity['user_id'], 'status' => 'approved'];
     }
 }

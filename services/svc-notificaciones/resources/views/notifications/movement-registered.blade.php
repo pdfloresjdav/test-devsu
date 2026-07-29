@@ -1,1 +1,1 @@
-Hola, se registró un movimiento en tu cuenta {{ $detalle['cuenta_id'] ?? '' }}: {{ $detalle['tipo'] ?? '' }} por {{ number_format((float) ($detalle['monto'] ?? 0), 2) }}. Si no reconoces este movimiento, contacta a BP de inmediato.
+Hello, a movement was registered on your account {{ $detail['account_id'] ?? '' }}: {{ $detail['type'] ?? '' }} for {{ number_format((float) ($detail['amount'] ?? 0), 2) }}. If you don't recognize this movement, contact BP immediately.

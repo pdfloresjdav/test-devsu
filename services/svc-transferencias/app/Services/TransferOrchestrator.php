@@ -2,21 +2,20 @@
 
 namespace App\Services;
 
+use App\Contracts\InsufficientBalanceException;
 use App\Contracts\InterbankClient;
 use App\Contracts\InterbankException;
-use App\Contracts\SaldoInsuficienteException;
-use App\Models\Cuenta;
-use App\Models\Transferencia;
+use App\Models\Account;
+use App\Models\Transfer;
 use BP\Common\Events\EventPublisherInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Orquesta la transferencia como una Saga (decision 3.4 / diagrama de
- * componentes 3b): debita en una transaccion local, intenta la
- * transferencia externa, y si falla ejecuta el paso de compensacion
- * (revierte el debito) en vez de dejar el sistema en un estado
- * inconsistente.
+ * Orchestrates the transfer as a Saga (decision 3.4 / component diagram
+ * 3b): debits within a local transaction, attempts the external transfer,
+ * and if it fails runs the compensation step (reverts the debit) instead
+ * of leaving the system in an inconsistent state.
  */
 class TransferOrchestrator
 {
@@ -26,86 +25,86 @@ class TransferOrchestrator
     ) {
     }
 
-    public function ejecutar(
-        string $cuentaOrigen,
-        string $cuentaDestino,
-        float $monto,
-        string $descripcion,
+    public function execute(
+        string $sourceAccount,
+        string $destinationAccount,
+        float $amount,
+        string $description,
         string $idempotencyKey,
         string $actor = 'system',
-    ): Transferencia {
-        $transferencia = $this->debitarYCrearTransferencia(
-            $cuentaOrigen,
-            $cuentaDestino,
-            $monto,
-            $descripcion,
+    ): Transfer {
+        $transfer = $this->debitAndCreateTransfer(
+            $sourceAccount,
+            $destinationAccount,
+            $amount,
+            $description,
             $idempotencyKey,
         );
 
         try {
-            $this->interbank->ejecutar($cuentaDestino, $monto);
-            $transferencia->update(['estado' => Transferencia::ESTADO_COMPLETADA]);
+            $this->interbank->execute($destinationAccount, $amount);
+            $transfer->update(['status' => Transfer::STATUS_COMPLETED]);
 
-            $this->events->publish('TransferCompleted', $this->eventPayload($transferencia, $actor));
+            $this->events->publish('TransferCompleted', $this->eventPayload($transfer, $actor));
         } catch (InterbankException $e) {
-            $this->compensar($cuentaOrigen, $monto);
-            $transferencia->update([
-                'estado' => Transferencia::ESTADO_FALLIDA,
-                'motivo_falla' => $e->getMessage(),
+            $this->compensate($sourceAccount, $amount);
+            $transfer->update([
+                'status' => Transfer::STATUS_FAILED,
+                'failure_reason' => $e->getMessage(),
             ]);
 
-            $this->events->publish('TransferFailed', $this->eventPayload($transferencia, $actor));
+            $this->events->publish('TransferFailed', $this->eventPayload($transfer, $actor));
         }
 
-        return $transferencia->fresh();
+        return $transfer->fresh();
     }
 
-    private function debitarYCrearTransferencia(
-        string $cuentaOrigen,
-        string $cuentaDestino,
-        float $monto,
-        string $descripcion,
+    private function debitAndCreateTransfer(
+        string $sourceAccount,
+        string $destinationAccount,
+        float $amount,
+        string $description,
         string $idempotencyKey,
-    ): Transferencia {
-        return DB::transaction(function () use ($cuentaOrigen, $cuentaDestino, $monto, $descripcion, $idempotencyKey) {
-            $cuenta = Cuenta::where('cuenta_id', $cuentaOrigen)->lockForUpdate()->firstOrFail();
+    ): Transfer {
+        return DB::transaction(function () use ($sourceAccount, $destinationAccount, $amount, $description, $idempotencyKey) {
+            $account = Account::where('account_id', $sourceAccount)->lockForUpdate()->firstOrFail();
 
-            if (bccomp((string) $cuenta->saldo, (string) $monto, 2) < 0) {
-                throw new SaldoInsuficienteException("La cuenta [{$cuentaOrigen}] no tiene saldo suficiente.");
+            if (bccomp((string) $account->balance, (string) $amount, 2) < 0) {
+                throw new InsufficientBalanceException("Account [{$sourceAccount}] doesn't have sufficient balance.");
             }
 
-            $cuenta->decrement('saldo', $monto);
+            $account->decrement('balance', $amount);
 
-            return Transferencia::create([
-                'transferencia_id' => (string) Str::uuid(),
+            return Transfer::create([
+                'transfer_id' => (string) Str::uuid(),
                 'idempotency_key' => $idempotencyKey,
-                'cuenta_origen' => $cuentaOrigen,
-                'cuenta_destino' => $cuentaDestino,
-                'monto' => $monto,
-                'descripcion' => $descripcion,
-                'estado' => Transferencia::ESTADO_PENDIENTE,
+                'source_account' => $sourceAccount,
+                'destination_account' => $destinationAccount,
+                'amount' => $amount,
+                'description' => $description,
+                'status' => Transfer::STATUS_PENDING,
             ]);
         });
     }
 
-    private function compensar(string $cuentaOrigen, float $monto): void
+    private function compensate(string $sourceAccount, float $amount): void
     {
-        DB::transaction(function () use ($cuentaOrigen, $monto) {
-            Cuenta::where('cuenta_id', $cuentaOrigen)->lockForUpdate()->increment('saldo', $monto);
+        DB::transaction(function () use ($sourceAccount, $amount) {
+            Account::where('account_id', $sourceAccount)->lockForUpdate()->increment('balance', $amount);
         });
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function eventPayload(Transferencia $transferencia, string $actor): array
+    private function eventPayload(Transfer $transfer, string $actor): array
     {
         return [
-            'transferencia_id' => $transferencia->transferencia_id,
-            'cuenta_origen' => $transferencia->cuenta_origen,
-            'cuenta_destino' => $transferencia->cuenta_destino,
-            'monto' => (float) $transferencia->monto,
-            'estado' => $transferencia->estado,
+            'transfer_id' => $transfer->transfer_id,
+            'source_account' => $transfer->source_account,
+            'destination_account' => $transfer->destination_account,
+            'amount' => (float) $transfer->amount,
+            'status' => $transfer->status,
             'actor' => $actor,
         ];
     }

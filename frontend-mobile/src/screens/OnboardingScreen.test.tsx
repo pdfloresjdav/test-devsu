@@ -9,70 +9,70 @@ jest.mock('../api/bffClient', () => {
 });
 
 describe('OnboardingScreen', () => {
-  const onAprobado = jest.fn();
+  const onApproved = jest.fn();
 
   beforeEach(() => {
     jest.mocked(bffFetch).mockReset();
-    onAprobado.mockClear();
+    onApproved.mockClear();
   });
 
-  it('habilita "Continuar" solo cuando los datos y las dos capturas simuladas están completos', () => {
-    render(<OnboardingScreen onAprobado={onAprobado} />);
+  it('enables "Continue" only once the data and both simulated captures are complete', () => {
+    render(<OnboardingScreen onApproved={onApproved} />);
 
-    expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
 
-    fireEvent.changeText(screen.getByTestId('input-nombre'), 'Ana Torres');
+    fireEvent.changeText(screen.getByTestId('input-name'), 'Ana Torres');
     fireEvent.changeText(screen.getByTestId('input-email'), 'ana@bp.test');
-    fireEvent.changeText(screen.getByTestId('input-documento'), '12345678');
-    fireEvent.press(screen.getByText('Simular captura de documento'));
-    fireEvent.press(screen.getByText('Simular captura de selfie'));
+    fireEvent.changeText(screen.getByTestId('input-document'), '12345678');
+    fireEvent.press(screen.getByText('Simulate document capture'));
+    fireEvent.press(screen.getByText('Simulate selfie capture'));
 
-    expect(screen.getByRole('button', { name: 'Continuar' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue' })).not.toBeDisabled();
   });
 
-  it('envía el onboarding y llama a onAprobado cuando el KYC aprueba', async () => {
-    jest.mocked(bffFetch).mockResolvedValueOnce({ usuario_id: 'auth0|abc123', estado: 'aprobado' });
+  it('submits the onboarding and calls onApproved when KYC approves', async () => {
+    jest.mocked(bffFetch).mockResolvedValueOnce({ user_id: 'auth0|abc123', status: 'approved' });
 
-    render(<OnboardingScreen onAprobado={onAprobado} />);
+    render(<OnboardingScreen onApproved={onApproved} />);
 
-    fireEvent.changeText(screen.getByTestId('input-nombre'), 'Ana Torres');
+    fireEvent.changeText(screen.getByTestId('input-name'), 'Ana Torres');
     fireEvent.changeText(screen.getByTestId('input-email'), 'ana@bp.test');
-    fireEvent.changeText(screen.getByTestId('input-documento'), '12345678');
-    fireEvent.press(screen.getByText('Simular captura de documento'));
-    fireEvent.press(screen.getByText('Simular captura de selfie'));
-    fireEvent.press(screen.getByText('Continuar'));
+    fireEvent.changeText(screen.getByTestId('input-document'), '12345678');
+    fireEvent.press(screen.getByText('Simulate document capture'));
+    fireEvent.press(screen.getByText('Simulate selfie capture'));
+    fireEvent.press(screen.getByText('Continue'));
 
-    await waitFor(() => expect(onAprobado).toHaveBeenCalledWith('auth0|abc123'));
+    await waitFor(() => expect(onApproved).toHaveBeenCalledWith('auth0|abc123'));
 
     const [path, options] = jest.mocked(bffFetch).mock.calls[0];
     expect(path).toBe('/onboarding');
     expect(JSON.parse((options as { body: string }).body)).toMatchObject({
-      documento_identidad: '12345678',
+      identity_document: '12345678',
     });
   });
 
-  it('muestra un error si el KYC rechaza (documento_identidad "RECHAZA-...")', async () => {
+  it('shows an error if KYC rejects (identity_document "REJECT-...")', async () => {
     const { BffError } = jest.requireActual(
       '../api/bffClient',
     ) as typeof import('../api/bffClient');
     jest
       .mocked(bffFetch)
       .mockRejectedValueOnce(
-        new BffError(422, 'onboarding_rechazado', 'Verificación de identidad rechazada'),
+        new BffError(422, 'onboarding_rejected', 'Identity verification rejected'),
       );
 
-    render(<OnboardingScreen onAprobado={onAprobado} />);
+    render(<OnboardingScreen onApproved={onApproved} />);
 
-    fireEvent.changeText(screen.getByTestId('input-nombre'), 'Ana Torres');
+    fireEvent.changeText(screen.getByTestId('input-name'), 'Ana Torres');
     fireEvent.changeText(screen.getByTestId('input-email'), 'ana@bp.test');
-    fireEvent.changeText(screen.getByTestId('input-documento'), 'RECHAZA-1');
-    fireEvent.press(screen.getByText('Simular captura de documento'));
-    fireEvent.press(screen.getByText('Simular captura de selfie'));
-    fireEvent.press(screen.getByText('Continuar'));
+    fireEvent.changeText(screen.getByTestId('input-document'), 'REJECT-1');
+    fireEvent.press(screen.getByText('Simulate document capture'));
+    fireEvent.press(screen.getByText('Simulate selfie capture'));
+    fireEvent.press(screen.getByText('Continue'));
 
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent('Verificación de identidad rechazada'),
+      expect(screen.getByRole('alert')).toHaveTextContent('Identity verification rejected'),
     );
-    expect(onAprobado).not.toHaveBeenCalled();
+    expect(onApproved).not.toHaveBeenCalled();
   });
 });

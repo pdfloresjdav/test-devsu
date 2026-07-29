@@ -136,7 +136,7 @@ services:
     build:
       context: .
       dockerfile: services/svc-datos-basicos/Dockerfile
-    container_name: bp-svc-datos-basicos
+    container_name: bp-svc-customer-data
     restart: unless-stopped
     profiles: ["services"]
     ports:
@@ -158,7 +158,7 @@ services:
     build:
       context: .
       dockerfile: services/svc-movimientos/Dockerfile
-    container_name: bp-svc-movimientos
+    container_name: bp-svc-movements
     restart: unless-stopped
     profiles: ["services"]
     ports:
@@ -176,9 +176,9 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       EVENT_BUS_NAME: bp-domain-events
       EVENT_SOURCE: bp.svc-movimientos
-      MOVIMIENTOS_TABLE: movimientos
-      MOVIMIENTOS_CACHE_STORE: redis
-      MOVIMIENTOS_CACHE_TTL_SECONDS: "60"
+      MOVEMENTS_TABLE: movements
+      MOVEMENTS_CACHE_STORE: redis
+      MOVEMENTS_CACHE_TTL_SECONDS: "60"
     depends_on:
       mock-oidc:
         condition: service_healthy
@@ -197,7 +197,7 @@ services:
     build:
       context: .
       dockerfile: services/svc-transferencias/Dockerfile
-    container_name: bp-svc-transferencias
+    container_name: bp-svc-transfers
     restart: unless-stopped
     profiles: ["services"]
     ports:
@@ -208,7 +208,7 @@ services:
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: "3306"
-      DB_DATABASE: svc_transferencias
+      DB_DATABASE: svc_transfers
       DB_USERNAME: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       CACHE_STORE: redis
@@ -246,7 +246,7 @@ services:
     build:
       context: .
       dockerfile: services/svc-auditoria/Dockerfile
-    container_name: bp-svc-auditoria
+    container_name: bp-svc-audit
     restart: unless-stopped
     profiles: ["services"]
     environment:
@@ -257,12 +257,12 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       EVENT_BUS_NAME: bp-domain-events
       EVENT_SOURCE: bp.svc-auditoria
-      AUDITORIA_TABLE: auditoria
-      AUDITORIA_BUCKET: bp-auditoria-worm
-      AUDITORIA_QUEUE_NAME: audit-events-queue
-      AUDITORIA_DLQ_NAME: audit-events-dlq
-      AUDITORIA_RULE_NAME: audit-all-domain-events
-      AUDITORIA_QUEUE_URL: http://localstack:4566/000000000000/audit-events-queue
+      AUDIT_TABLE: audit
+      AUDIT_BUCKET: bp-audit-worm
+      AUDIT_QUEUE_NAME: audit-events-queue
+      AUDIT_DLQ_NAME: audit-events-dlq
+      AUDIT_RULE_NAME: audit-all-domain-events
+      AUDIT_QUEUE_URL: http://localstack:4566/000000000000/audit-events-queue
     depends_on:
       localstack:
         condition: service_healthy
@@ -271,7 +271,7 @@ services:
     build:
       context: .
       dockerfile: services/svc-notificaciones/Dockerfile
-    container_name: bp-svc-notificaciones
+    container_name: bp-svc-notifications
     restart: unless-stopped
     profiles: ["services"]
     environment:
@@ -283,11 +283,11 @@ services:
       EVENT_BUS_NAME: bp-domain-events
       EVENT_SOURCE: bp.svc-notificaciones
       NOTIFICATION_DRIVER: log
-      NOTIFICACIONES_TABLE: notification_deliveries
-      NOTIFICACIONES_QUEUE_NAME: notification-events-queue
-      NOTIFICACIONES_DLQ_NAME: notification-events-dlq
-      NOTIFICACIONES_RULE_NAME: notify-all-domain-events
-      NOTIFICACIONES_QUEUE_URL: http://localstack:4566/000000000000/notification-events-queue
+      NOTIFICATIONS_TABLE: notification_deliveries
+      NOTIFICATIONS_QUEUE_NAME: notification-events-queue
+      NOTIFICATIONS_DLQ_NAME: notification-events-dlq
+      NOTIFICATIONS_RULE_NAME: notify-all-domain-events
+      NOTIFICATIONS_QUEUE_URL: http://localstack:4566/000000000000/notification-events-queue
     depends_on:
       localstack:
         condition: service_healthy
@@ -304,9 +304,9 @@ services:
     environment:
       APP_KEY: "base64:9+0gF8yJ+cfKpOtzBSyXG2ejRxtSPMgPizU9ECbRS2g="
       OIDC_DISCOVERY_ISSUER: http://mock-oidc:80
-      DATOS_BASICOS_BASE_URL: http://svc-datos-basicos:8000
-      MOVIMIENTOS_BASE_URL: http://svc-movimientos:8000
-      TRANSFERENCIAS_BASE_URL: http://svc-transferencias:8000
+      CUSTOMER_DATA_BASE_URL: http://svc-datos-basicos:8000
+      MOVEMENTS_BASE_URL: http://svc-movimientos:8000
+      TRANSFERS_BASE_URL: http://svc-transferencias:8000
     depends_on:
       mock-oidc:
         condition: service_healthy
@@ -335,9 +335,9 @@ services:
     environment:
       APP_KEY: "base64:f/uBz+4Chaxq5zvKVF5MWrGQeul7tNj6upV/S/83ySs="
       OIDC_DISCOVERY_ISSUER: http://mock-oidc:80
-      DATOS_BASICOS_BASE_URL: http://svc-datos-basicos:8000
-      MOVIMIENTOS_BASE_URL: http://svc-movimientos:8000
-      TRANSFERENCIAS_BASE_URL: http://svc-transferencias:8000
+      CUSTOMER_DATA_BASE_URL: http://svc-datos-basicos:8000
+      MOVEMENTS_BASE_URL: http://svc-movimientos:8000
+      TRANSFERS_BASE_URL: http://svc-transferencias:8000
       AWS_ENDPOINT_URL: http://localstack:4566
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: test

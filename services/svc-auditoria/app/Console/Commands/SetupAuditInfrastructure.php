@@ -12,46 +12,46 @@ use Aws\Sqs\SqsClient;
 use Illuminate\Console\Command;
 
 /**
- * Provision idempotente de la infraestructura local que necesita este
- * servicio: DLQ + cola SQS (con redrive policy), regla de EventBridge que
- * rutea los eventos de dominio hacia esa cola, tabla DynamoDB de auditoria,
- * y el bucket S3 que usa el WORM Archiver. Equivalente local a lo que en
- * AWS real se modela con IaC (Fase 13).
+ * Idempotent provisioning of the local infrastructure this service needs:
+ * DLQ + SQS queue (with redrive policy), EventBridge rule that routes
+ * domain events to that queue, audit DynamoDB table, and the S3 bucket
+ * used by the WORM Archiver. Local equivalent of what gets modeled with
+ * IaC on real AWS (Phase 14).
  */
 class SetupAuditInfrastructure extends Command
 {
     protected $signature = 'audit:setup-infrastructure';
 
-    protected $description = 'Crea la cola SQS + DLQ, la regla de EventBridge, la tabla DynamoDB y el bucket S3 de auditoria (idempotente)';
+    protected $description = 'Creates the audit SQS queue + DLQ, EventBridge rule, DynamoDB table, and S3 bucket (idempotent)';
 
     public function handle(SqsClient $sqs, EventBridgeClient $eventBridge, DynamoDbClient $dynamo, S3Client $s3): int
     {
-        $queueUrl = $this->crearColasSqs($sqs);
-        $this->crearReglaEventBridge($eventBridge, $sqs, $queueUrl);
-        $this->crearTablaDynamo($dynamo);
-        $this->crearBucketS3($s3);
+        $queueUrl = $this->createSqsQueues($sqs);
+        $this->createEventBridgeRule($eventBridge, $sqs, $queueUrl);
+        $this->createDynamoTable($dynamo);
+        $this->createS3Bucket($s3);
 
-        $this->info("Listo. QUEUE_URL para .env: {$queueUrl}");
+        $this->info("Done. QUEUE_URL for .env: {$queueUrl}");
 
         return self::SUCCESS;
     }
 
-    private function crearColasSqs(SqsClient $sqs): string
+    private function createSqsQueues(SqsClient $sqs): string
     {
-        $dlqName = config('services.auditoria.dlq_name');
-        $queueName = config('services.auditoria.queue_name');
+        $dlqName = config('services.audit.dlq_name');
+        $queueName = config('services.audit.queue_name');
 
-        $dlqUrl = $this->crearColaSiNoExiste($sqs, $dlqName);
+        $dlqUrl = $this->createQueueIfNotExists($sqs, $dlqName);
         $dlqArn = $sqs->getQueueAttributes(['QueueUrl' => $dlqUrl, 'AttributeNames' => ['QueueArn']])['Attributes']['QueueArn'];
 
-        $queueUrl = $this->crearColaSiNoExiste($sqs, $queueName, [
+        $queueUrl = $this->createQueueIfNotExists($sqs, $queueName, [
             'RedrivePolicy' => json_encode([
                 'deadLetterTargetArn' => $dlqArn,
                 'maxReceiveCount' => '3',
             ]),
         ]);
 
-        $this->info("Colas SQS listas: {$queueName} (DLQ: {$dlqName})");
+        $this->info("SQS queues ready: {$queueName} (DLQ: {$dlqName})");
 
         return $queueUrl;
     }
@@ -59,7 +59,7 @@ class SetupAuditInfrastructure extends Command
     /**
      * @param array<string, string> $attributes
      */
-    private function crearColaSiNoExiste(SqsClient $sqs, string $name, array $attributes = []): string
+    private function createQueueIfNotExists(SqsClient $sqs, string $name, array $attributes = []): string
     {
         try {
             return $sqs->getQueueUrl(['QueueName' => $name])['QueueUrl'];
@@ -72,19 +72,18 @@ class SetupAuditInfrastructure extends Command
         return $sqs->createQueue(['QueueName' => $name, 'Attributes' => $attributes])['QueueUrl'];
     }
 
-    private function crearReglaEventBridge(EventBridgeClient $eventBridge, SqsClient $sqs, string $queueUrl): void
+    private function createEventBridgeRule(EventBridgeClient $eventBridge, SqsClient $sqs, string $queueUrl): void
     {
         $busName = config('bp-common.events.event_bus_name');
-        $ruleName = config('services.auditoria.rule_name');
+        $ruleName = config('services.audit.rule_name');
         $queueArn = $sqs->getQueueAttributes(['QueueUrl' => $queueUrl, 'AttributeNames' => ['QueueArn']])['Attributes']['QueueArn'];
 
         try {
             $eventBridge->putRule([
                 'Name' => $ruleName,
                 'EventBusName' => $busName,
-                // Todos los eventos de dominio publicados en el bus se
-                // auditan (decision de negocio: TODAS las acciones del
-                // cliente quedan registradas).
+                // Every domain event published on the bus gets audited
+                // (business decision: ALL customer actions are recorded).
                 'EventPattern' => json_encode(['source' => [['prefix' => 'bp.']]]),
                 'State' => 'ENABLED',
             ]);
@@ -98,7 +97,7 @@ class SetupAuditInfrastructure extends Command
             throw $e;
         }
 
-        // Politica de la cola para que EventBridge pueda enviarle mensajes.
+        // Queue policy so EventBridge can send it messages.
         $sqs->setQueueAttributes([
             'QueueUrl' => $queueUrl,
             'Attributes' => [
@@ -114,16 +113,16 @@ class SetupAuditInfrastructure extends Command
             ],
         ]);
 
-        $this->info("Regla de EventBridge [{$ruleName}] enrutando el bus [{$busName}] hacia la cola de auditoria.");
+        $this->info("EventBridge rule [{$ruleName}] routing bus [{$busName}] to the audit queue.");
     }
 
-    private function crearTablaDynamo(DynamoDbClient $dynamo): void
+    private function createDynamoTable(DynamoDbClient $dynamo): void
     {
-        $table = config('services.auditoria.table');
+        $table = config('services.audit.table');
 
         try {
             $dynamo->describeTable(['TableName' => $table]);
-            $this->info("La tabla [{$table}] ya existia.");
+            $this->info("Table [{$table}] already existed.");
 
             return;
         } catch (DynamoDbException $e) {
@@ -146,16 +145,16 @@ class SetupAuditInfrastructure extends Command
         ]);
 
         $dynamo->waitUntil('TableExists', ['TableName' => $table]);
-        $this->info("Tabla [{$table}] creada.");
+        $this->info("Table [{$table}] created.");
     }
 
-    private function crearBucketS3(S3Client $s3): void
+    private function createS3Bucket(S3Client $s3): void
     {
-        $bucket = config('services.auditoria.bucket');
+        $bucket = config('services.audit.bucket');
 
         try {
             $s3->headBucket(['Bucket' => $bucket]);
-            $this->info("El bucket [{$bucket}] ya existia.");
+            $this->info("Bucket [{$bucket}] already existed.");
 
             return;
         } catch (S3Exception $e) {
@@ -165,6 +164,6 @@ class SetupAuditInfrastructure extends Command
         }
 
         $s3->createBucket(['Bucket' => $bucket]);
-        $this->info("Bucket [{$bucket}] creado.");
+        $this->info("Bucket [{$bucket}] created.");
     }
 }

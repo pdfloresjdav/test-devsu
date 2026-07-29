@@ -11,56 +11,56 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * Corre contra el LocalStack real de docker-compose (bp-localstack), igual
- * que el resto de los servicios del proyecto.
+ * Runs against the real LocalStack from docker-compose (bp-localstack),
+ * just like the rest of the project's services.
  */
 class DynamoDbAuditRepositoryTest extends TestCase
 {
-    public function test_registra_un_registro_de_auditoria_con_hash_y_timestamp(): void
+    public function test_registers_an_audit_record_with_hash_and_timestamp(): void
     {
         $actor = 'actor-' . Str::uuid();
 
         $repository = new DynamoDbAuditRepository(
             $this->app->make(DynamoDbClient::class),
             $this->app->make(Marshaler::class),
-            config('services.auditoria.table'),
+            config('services.audit.table'),
         );
 
-        $registro = $repository->registrar($actor, 'MovementRegistered', ['cuenta_id' => 'X', 'monto' => 10]);
+        $record = $repository->register($actor, 'MovementRegistered', ['account_id' => 'X', 'amount' => 10]);
 
-        $this->assertSame($actor, $registro['actor']);
-        $this->assertSame('MovementRegistered', $registro['accion']);
-        $this->assertNotEmpty($registro['hash']);
-        $this->assertNotEmpty($registro['timestamp']);
-        $this->assertNotEmpty($registro['audit_id']);
+        $this->assertSame($actor, $record['actor']);
+        $this->assertSame('MovementRegistered', $record['action']);
+        $this->assertNotEmpty($record['hash']);
+        $this->assertNotEmpty($record['timestamp']);
+        $this->assertNotEmpty($record['audit_id']);
     }
 
-    public function test_el_worm_archiver_escribe_el_registro_en_s3(): void
+    public function test_the_worm_archiver_writes_the_record_to_s3(): void
     {
         $archiver = new WormArchiver(
             $this->app->make(S3Client::class),
-            config('services.auditoria.bucket'),
+            config('services.audit.bucket'),
         );
 
-        $registro = [
+        $record = [
             'audit_id' => (string) Str::uuid(),
             'actor' => 'actor-worm-test',
-            'accion' => 'MovementRegistered',
-            'detalle' => ['x' => 1],
+            'action' => 'MovementRegistered',
+            'detail' => ['x' => 1],
             'hash' => 'abc123',
             'timestamp' => now()->toIso8601String(),
         ];
 
-        $archiver->archivar($registro);
+        $archiver->archive($record);
 
         $s3 = $this->app->make(S3Client::class);
-        $objeto = $s3->getObject([
-            'Bucket' => config('services.auditoria.bucket'),
-            'Key' => "auditoria/{$registro['actor']}/{$registro['audit_id']}.json",
+        $object = $s3->getObject([
+            'Bucket' => config('services.audit.bucket'),
+            'Key' => "audit/{$record['actor']}/{$record['audit_id']}.json",
         ]);
 
-        $contenido = json_decode((string) $objeto['Body'], true);
-        $this->assertSame($registro['audit_id'], $contenido['audit_id']);
-        $this->assertSame('abc123', $contenido['hash']);
+        $content = json_decode((string) $object['Body'], true);
+        $this->assertSame($record['audit_id'], $content['audit_id']);
+        $this->assertSame('abc123', $content['hash']);
     }
 }

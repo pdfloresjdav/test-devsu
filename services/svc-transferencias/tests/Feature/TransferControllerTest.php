@@ -2,144 +2,144 @@
 
 namespace Tests\Feature;
 
-use App\Models\Transferencia;
+use App\Models\Transfer;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class TransferControllerTest extends TestCase
 {
-    public function test_rechaza_sin_token(): void
+    public function test_rejects_without_a_token(): void
     {
         $this->postJson('/transfers', [])->assertStatus(401);
     }
 
-    public function test_camino_feliz_completa_la_transferencia_y_debita_el_saldo(): void
+    public function test_happy_path_completes_the_transfer_and_debits_the_balance(): void
     {
-        $origen = $this->crearCuenta(saldo: 1000);
+        $source = $this->createAccount(balance: 1000);
         $token = $this->signToken();
 
         $response = $this->withHeaders([
             'Authorization' => "Bearer {$token}",
             'Idempotency-Key' => (string) Str::uuid(),
         ])->postJson('/transfers', [
-            'cuenta_origen' => $origen->cuenta_id,
-            'cuenta_destino' => 'CUENTA-DESTINO',
-            'monto' => 200,
-            'descripcion' => 'Pago de prueba',
+            'source_account' => $source->account_id,
+            'destination_account' => 'DESTINATION-ACCOUNT',
+            'amount' => 200,
+            'description' => 'Test payment',
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('data.estado', Transferencia::ESTADO_COMPLETADA);
+            ->assertJsonPath('data.status', Transfer::STATUS_COMPLETED);
 
-        $this->assertEquals(800, $origen->fresh()->saldo);
+        $this->assertEquals(800, $source->fresh()->balance);
     }
 
-    public function test_rechaza_sin_idempotency_key(): void
+    public function test_rejects_without_an_idempotency_key(): void
     {
-        $origen = $this->crearCuenta();
+        $source = $this->createAccount();
         $token = $this->signToken();
 
         $this->withHeader('Authorization', "Bearer {$token}")
             ->postJson('/transfers', [
-                'cuenta_origen' => $origen->cuenta_id,
-                'cuenta_destino' => 'CUENTA-DESTINO',
-                'monto' => 100,
+                'source_account' => $source->account_id,
+                'destination_account' => 'DESTINATION-ACCOUNT',
+                'amount' => 100,
             ])
             ->assertStatus(400)
             ->assertJsonPath('error.code', 'missing_idempotency_key');
     }
 
-    public function test_una_segunda_llamada_con_la_misma_idempotency_key_no_debita_de_nuevo(): void
+    public function test_a_second_call_with_the_same_idempotency_key_does_not_debit_again(): void
     {
-        $origen = $this->crearCuenta(saldo: 1000);
+        $source = $this->createAccount(balance: 1000);
         $token = $this->signToken();
         $idempotencyKey = (string) Str::uuid();
 
         $payload = [
-            'cuenta_origen' => $origen->cuenta_id,
-            'cuenta_destino' => 'CUENTA-DESTINO',
-            'monto' => 300,
-            'descripcion' => 'Pago unico',
+            'source_account' => $source->account_id,
+            'destination_account' => 'DESTINATION-ACCOUNT',
+            'amount' => 300,
+            'description' => 'One-time payment',
         ];
 
-        $primera = $this->withHeaders(['Authorization' => "Bearer {$token}", 'Idempotency-Key' => $idempotencyKey])
+        $first = $this->withHeaders(['Authorization' => "Bearer {$token}", 'Idempotency-Key' => $idempotencyKey])
             ->postJson('/transfers', $payload);
-        $segunda = $this->withHeaders(['Authorization' => "Bearer {$token}", 'Idempotency-Key' => $idempotencyKey])
+        $second = $this->withHeaders(['Authorization' => "Bearer {$token}", 'Idempotency-Key' => $idempotencyKey])
             ->postJson('/transfers', $payload);
 
-        $primera->assertStatus(201);
-        $segunda->assertStatus(201);
-        $this->assertSame($primera->json('data.transferencia_id'), $segunda->json('data.transferencia_id'));
+        $first->assertStatus(201);
+        $second->assertStatus(201);
+        $this->assertSame($first->json('data.transfer_id'), $second->json('data.transfer_id'));
 
-        // Si hubiera debitado dos veces, el saldo seria 400, no 700.
-        $this->assertEquals(700, $origen->fresh()->saldo);
-        $this->assertSame(1, Transferencia::where('idempotency_key', $idempotencyKey)->count());
+        // If it had debited twice, the balance would be 400, not 700.
+        $this->assertEquals(700, $source->fresh()->balance);
+        $this->assertSame(1, Transfer::where('idempotency_key', $idempotencyKey)->count());
     }
 
-    public function test_si_el_banco_destino_rechaza_se_compensa_el_debito(): void
+    public function test_if_the_destination_bank_rejects_it_the_debit_is_compensated(): void
     {
-        $origen = $this->crearCuenta(saldo: 1000);
+        $source = $this->createAccount(balance: 1000);
         $token = $this->signToken();
 
         $response = $this->withHeaders([
             'Authorization' => "Bearer {$token}",
             'Idempotency-Key' => (string) Str::uuid(),
         ])->postJson('/transfers', [
-            'cuenta_origen' => $origen->cuenta_id,
-            'cuenta_destino' => 'FALLA-DESTINO',
-            'monto' => 250,
+            'source_account' => $source->account_id,
+            'destination_account' => 'FAIL-DESTINATION',
+            'amount' => 250,
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonPath('data.estado', Transferencia::ESTADO_FALLIDA);
+            ->assertJsonPath('data.status', Transfer::STATUS_FAILED);
 
-        $this->assertEquals(1000, $origen->fresh()->saldo, 'El saldo debio quedar igual tras la compensacion');
+        $this->assertEquals(1000, $source->fresh()->balance, 'The balance should have stayed the same after compensation');
     }
 
-    public function test_rechaza_por_saldo_insuficiente(): void
+    public function test_rejects_due_to_insufficient_balance(): void
     {
-        $origen = $this->crearCuenta(saldo: 50);
+        $source = $this->createAccount(balance: 50);
         $token = $this->signToken();
 
         $this->withHeaders(['Authorization' => "Bearer {$token}", 'Idempotency-Key' => (string) Str::uuid()])
             ->postJson('/transfers', [
-                'cuenta_origen' => $origen->cuenta_id,
-                'cuenta_destino' => 'CUENTA-DESTINO',
-                'monto' => 200,
+                'source_account' => $source->account_id,
+                'destination_account' => 'DESTINATION-ACCOUNT',
+                'amount' => 200,
             ])
             ->assertStatus(422)
-            ->assertJsonPath('error.code', 'saldo_insuficiente');
+            ->assertJsonPath('error.code', 'insufficient_balance');
     }
 
-    public function test_rechaza_transferencias_grandes_sin_autenticacion_reforzada(): void
+    public function test_rejects_large_transfers_without_step_up_authentication(): void
     {
-        $origen = $this->crearCuenta(saldo: 5000);
-        $token = $this->signToken(); // sin acr/amr de step-up
+        $source = $this->createAccount(balance: 5000);
+        $token = $this->signToken(); // no step-up acr/amr
 
         $this->withHeaders(['Authorization' => "Bearer {$token}", 'Idempotency-Key' => (string) Str::uuid()])
             ->postJson('/transfers', [
-                'cuenta_origen' => $origen->cuenta_id,
-                'cuenta_destino' => 'CUENTA-DESTINO',
-                'monto' => 5000,
+                'source_account' => $source->account_id,
+                'destination_account' => 'DESTINATION-ACCOUNT',
+                'amount' => 5000,
             ])
             ->assertStatus(403)
             ->assertJsonPath('error.code', 'step_up_required');
 
-        $this->assertEquals(5000, $origen->fresh()->saldo, 'No debio debitar nada');
+        $this->assertEquals(5000, $source->fresh()->balance, 'Nothing should have been debited');
     }
 
-    public function test_permite_transferencias_grandes_con_autenticacion_reforzada(): void
+    public function test_allows_large_transfers_with_step_up_authentication(): void
     {
-        $origen = $this->crearCuenta(saldo: 5000);
+        $source = $this->createAccount(balance: 5000);
         $token = $this->signToken(['acr' => 'step-up']);
 
         $this->withHeaders(['Authorization' => "Bearer {$token}", 'Idempotency-Key' => (string) Str::uuid()])
             ->postJson('/transfers', [
-                'cuenta_origen' => $origen->cuenta_id,
-                'cuenta_destino' => 'CUENTA-DESTINO',
-                'monto' => 5000,
+                'source_account' => $source->account_id,
+                'destination_account' => 'DESTINATION-ACCOUNT',
+                'amount' => 5000,
             ])
             ->assertStatus(201)
-            ->assertJsonPath('data.estado', Transferencia::ESTADO_COMPLETADA);
+            ->assertJsonPath('data.status', Transfer::STATUS_COMPLETED);
     }
 }

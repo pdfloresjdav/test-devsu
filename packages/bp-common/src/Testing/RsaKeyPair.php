@@ -5,9 +5,9 @@ namespace BP\Common\Testing;
 use Firebase\JWT\JWT;
 
 /**
- * Genera un par de llaves RSA en memoria y su representacion JWK, para
- * poder firmar y verificar JWTs de prueba sin depender de una red ni de
- * un servidor OIDC real.
+ * Generates an in-memory RSA key pair and its JWK representation, to sign
+ * and verify test JWTs without depending on a network or a real OIDC
+ * server.
  */
 class RsaKeyPair
 {

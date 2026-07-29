@@ -5,9 +5,8 @@ namespace BP\Common\Http;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Envelope de respuesta comun a todos los servicios, para que un cliente
- * (BFF, SPA, app movil) no tenga que aprender un formato distinto por
- * microservicio.
+ * Response envelope shared by every service, so a client (BFF, SPA,
+ * mobile app) doesn't have to learn a different format per microservice.
  */
 class ApiResponse
 {

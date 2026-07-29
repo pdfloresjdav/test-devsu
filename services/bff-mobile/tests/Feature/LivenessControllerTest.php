@@ -6,37 +6,37 @@ use Tests\TestCase;
 
 class LivenessControllerTest extends TestCase
 {
-    public function test_rechaza_sin_token(): void
+    public function test_rejects_without_token(): void
     {
-        $this->postJson('/revalidar-liveness', [
-            'selfie_referencia' => 'ref',
-            'selfie_nueva' => 'nueva',
+        $this->postJson('/revalidate-liveness', [
+            'reference_selfie' => 'ref',
+            'new_selfie' => 'new',
         ])->assertStatus(401);
     }
 
-    public function test_revalida_liveness_correctamente(): void
+    public function test_revalidates_liveness_successfully(): void
     {
         $token = $this->signToken();
 
         $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/revalidar-liveness', [
-                'selfie_referencia' => 'ref',
-                'selfie_nueva' => 'nueva',
+            ->postJson('/revalidate-liveness', [
+                'reference_selfie' => 'ref',
+                'new_selfie' => 'new',
             ])
             ->assertStatus(200)
-            ->assertJsonPath('data.aprobado', true);
+            ->assertJsonPath('data.approved', true);
     }
 
-    public function test_revalida_liveness_rechazada(): void
+    public function test_revalidates_liveness_rejected(): void
     {
         $token = $this->signToken();
 
         $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/revalidar-liveness', [
-                'selfie_referencia' => 'ref',
-                'selfie_nueva' => 'RECHAZA',
+            ->postJson('/revalidate-liveness', [
+                'reference_selfie' => 'ref',
+                'new_selfie' => 'REJECT',
             ])
             ->assertStatus(200)
-            ->assertJsonPath('data.aprobado', false);
+            ->assertJsonPath('data.approved', false);
     }
 }

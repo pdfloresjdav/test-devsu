@@ -2,37 +2,37 @@
 
 namespace Tests\Unit;
 
-use App\Clients\FakeClienteComplementarioClient;
-use App\Clients\FakeCoreBancarioClient;
-use App\Contracts\ClienteNoEncontradoException;
+use App\Clients\FakeCoreBankingClient;
+use App\Clients\FakeCustomerProfileClient;
+use App\Contracts\CustomerNotFoundException;
 use PHPUnit\Framework\TestCase;
 
 class FakeClientsTest extends TestCase
 {
-    public function test_fake_core_bancario_devuelve_datos_de_un_cliente_conocido(): void
+    public function test_fake_core_banking_returns_data_for_a_known_customer(): void
     {
-        $cliente = (new FakeCoreBancarioClient())->getDatosBasicos('1001');
+        $customer = (new FakeCoreBankingClient())->getBasicData('1001');
 
-        $this->assertSame('Ana Torres', $cliente['nombre']);
-        $this->assertNotEmpty($cliente['productos']);
+        $this->assertSame('Ana Torres', $customer['name']);
+        $this->assertNotEmpty($customer['products']);
     }
 
-    public function test_fake_core_bancario_lanza_excepcion_para_un_cliente_desconocido(): void
+    public function test_fake_core_banking_throws_an_exception_for_an_unknown_customer(): void
     {
-        $this->expectException(ClienteNoEncontradoException::class);
-        (new FakeCoreBancarioClient())->getDatosBasicos('9999');
+        $this->expectException(CustomerNotFoundException::class);
+        (new FakeCoreBankingClient())->getBasicData('9999');
     }
 
-    public function test_fake_complementario_devuelve_detalle_de_un_cliente_conocido(): void
+    public function test_fake_customer_profile_returns_profile_for_a_known_customer(): void
     {
-        $detalle = (new FakeClienteComplementarioClient())->getDetalle('1002');
+        $profile = (new FakeCustomerProfileClient())->getProfile('1002');
 
-        $this->assertSame('estandar', $detalle['segmento']);
+        $this->assertSame('standard', $profile['segment']);
     }
 
-    public function test_fake_complementario_lanza_excepcion_para_un_cliente_desconocido(): void
+    public function test_fake_customer_profile_throws_an_exception_for_an_unknown_customer(): void
     {
-        $this->expectException(ClienteNoEncontradoException::class);
-        (new FakeClienteComplementarioClient())->getDetalle('9999');
+        $this->expectException(CustomerNotFoundException::class);
+        (new FakeCustomerProfileClient())->getProfile('9999');
     }
 }

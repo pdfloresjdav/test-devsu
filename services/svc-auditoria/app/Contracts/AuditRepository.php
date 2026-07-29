@@ -5,20 +5,20 @@ namespace App\Contracts;
 interface AuditRepository
 {
     /**
-     * Persiste un registro de auditoria inmutable (actor, accion, detalle,
-     * timestamp y hash del evento) -- decision "Base de datos de auditoria"
-     * del documento de arquitectura.
+     * Persists an immutable audit record (actor, action, detail,
+     * timestamp, and event hash) -- "Audit database" decision from the
+     * architecture document.
      *
-     * @param array<string, mixed> $detalle
+     * @param array<string, mixed> $detail
      *
      * @return array{
      *     audit_id: string,
      *     actor: string,
-     *     accion: string,
-     *     detalle: array<string, mixed>,
+     *     action: string,
+     *     detail: array<string, mixed>,
      *     hash: string,
      *     timestamp: string
      * }
      */
-    public function registrar(string $actor, string $accion, array $detalle): array;
+    public function register(string $actor, string $action, array $detail): array;
 }

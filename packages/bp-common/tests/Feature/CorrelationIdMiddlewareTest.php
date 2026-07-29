@@ -9,23 +9,23 @@ class CorrelationIdMiddlewareTest extends TestCase
 {
     protected function defineRoutes($router): void
     {
-        $router->get('/con-correlation', fn () => response()->json(['ok' => true]))
+        $router->get('/with-correlation', fn () => response()->json(['ok' => true]))
             ->middleware(CorrelationIdMiddleware::class);
     }
 
-    public function test_genera_un_correlation_id_si_no_viene_en_el_request(): void
+    public function test_generates_a_correlation_id_when_not_present_in_the_request(): void
     {
-        $response = $this->getJson('/con-correlation');
+        $response = $this->getJson('/with-correlation');
 
         $response->assertStatus(200);
         $this->assertNotEmpty($response->headers->get(CorrelationIdMiddleware::HEADER));
     }
 
-    public function test_propaga_el_correlation_id_recibido(): void
+    public function test_propagates_the_received_correlation_id(): void
     {
-        $response = $this->withHeader(CorrelationIdMiddleware::HEADER, 'id-fijo-123')
-            ->getJson('/con-correlation');
+        $response = $this->withHeader(CorrelationIdMiddleware::HEADER, 'fixed-id-123')
+            ->getJson('/with-correlation');
 
-        $response->assertHeader(CorrelationIdMiddleware::HEADER, 'id-fijo-123');
+        $response->assertHeader(CorrelationIdMiddleware::HEADER, 'fixed-id-123');
     }
 }

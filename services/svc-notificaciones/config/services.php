@@ -35,22 +35,22 @@ return [
         ],
     ],
 
-    'notificaciones' => [
-        // 'log' en desarrollo (Pinpoint no tiene soporte gratuito en LocalStack);
-        // 'aws' activa Pinpoint (push/sms) + SES (email) reales.
+    'notifications' => [
+        // 'log' in development (Pinpoint has no free tier support in LocalStack);
+        // 'aws' activates real Pinpoint (push/sms) + SES (email).
         'driver' => env('NOTIFICATION_DRIVER', 'log'),
-        'table' => env('NOTIFICACIONES_TABLE', 'notification_deliveries'),
-        'queue_name' => env('NOTIFICACIONES_QUEUE_NAME', 'notification-events-queue'),
-        'dlq_name' => env('NOTIFICACIONES_DLQ_NAME', 'notification-events-dlq'),
-        'rule_name' => env('NOTIFICACIONES_RULE_NAME', 'notify-all-domain-events'),
-        'queue_url' => env('NOTIFICACIONES_QUEUE_URL'),
+        'table' => env('NOTIFICATIONS_TABLE', 'notification_deliveries'),
+        'queue_name' => env('NOTIFICATIONS_QUEUE_NAME', 'notification-events-queue'),
+        'dlq_name' => env('NOTIFICATIONS_DLQ_NAME', 'notification-events-dlq'),
+        'rule_name' => env('NOTIFICATIONS_RULE_NAME', 'notify-all-domain-events'),
+        'queue_url' => env('NOTIFICATIONS_QUEUE_URL'),
         'aws_region' => env('AWS_REGION', 'us-east-1'),
         'pinpoint_application_id' => env('PINPOINT_APPLICATION_ID'),
-        'ses_from_address' => env('SES_FROM_ADDRESS', 'notificaciones@bp.test'),
+        'ses_from_address' => env('SES_FROM_ADDRESS', 'notifications@bp.test'),
         'ses_endpoint' => env('AWS_SES_ENDPOINT', env('AWS_ENDPOINT_URL')),
 
-        // Decision 3.12: canal inmediato (push) + canal de respaldo (email)
-        // para eventos criticos; solo push para eventos informativos.
+        // Decision 3.12: immediate channel (push) + backup channel (email)
+        // for critical events; push only for informational events.
         'channel_map' => [
             'MovementRegistered' => ['push'],
             'TransferCompleted' => ['push', 'email'],
@@ -59,9 +59,9 @@ return [
         ],
 
         'subject_map' => [
-            'MovementRegistered' => 'Nuevo movimiento en tu cuenta BP',
-            'TransferCompleted' => 'Transferencia completada',
-            'TransferFailed' => 'Tu transferencia no se pudo completar',
+            'MovementRegistered' => 'New movement on your BP account',
+            'TransferCompleted' => 'Transfer completed',
+            'TransferFailed' => 'Your transfer could not be completed',
         ],
     ],
 

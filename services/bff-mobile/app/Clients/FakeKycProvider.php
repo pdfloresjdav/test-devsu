@@ -5,19 +5,19 @@ namespace App\Clients;
 use App\Contracts\KycProvider;
 
 /**
- * Simula al proveedor KYC (Onfido/iProov) mientras no exista una
- * integracion real. Determinista para poder probar el camino de rechazo:
- * cualquier documento de identidad que empiece con "RECHAZA-" es
- * rechazado; el resto se aprueba.
+ * Simulates the KYC provider (Onfido/iProov) while there's no real
+ * integration. Deterministic so the rejection path can be tested: any
+ * identity document starting with "REJECT-" is rejected; everything else
+ * is approved.
  */
 class FakeKycProvider implements KycProvider
 {
-    public function verificar(string $documentoIdentidad, string $selfie): array
+    public function verify(string $identityDocument, string $selfie): array
     {
-        if (str_starts_with($documentoIdentidad, 'RECHAZA-')) {
-            return ['aprobado' => false, 'score' => 0.12, 'motivo' => 'El documento no coincide con la selfie'];
+        if (str_starts_with($identityDocument, 'REJECT-')) {
+            return ['approved' => false, 'score' => 0.12, 'reason' => 'The document does not match the selfie'];
         }
 
-        return ['aprobado' => true, 'score' => 0.97, 'motivo' => null];
+        return ['approved' => true, 'score' => 0.97, 'reason' => null];
     }
 }

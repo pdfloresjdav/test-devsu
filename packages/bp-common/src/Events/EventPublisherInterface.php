@@ -5,8 +5,8 @@ namespace BP\Common\Events;
 interface EventPublisherInterface
 {
     /**
-     * Publica un evento de dominio al bus (EventBridge + SQS en AWS,
-     * LocalStack en local). Ver patron Pub/Sub, decision 3.13.
+     * Publishes a domain event to the bus (EventBridge + SQS on AWS,
+     * LocalStack locally). See the Pub/Sub pattern, decision 3.13.
      *
      * @param array<string, mixed> $payload
      */

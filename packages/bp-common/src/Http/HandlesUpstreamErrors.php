@@ -6,9 +6,9 @@ use BP\Common\Clients\UpstreamServiceException;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Trait de conveniencia para controladores de BFF: traduce una falla de un
- * servicio de negocio interno al mismo envelope de error del resto de la
- * API, preservando el status code real.
+ * Convenience trait for BFF controllers: translates a failure from an
+ * internal business service into the same error envelope as the rest of
+ * the API, preserving the real status code.
  */
 trait HandlesUpstreamErrors
 {

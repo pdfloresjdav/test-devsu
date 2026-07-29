@@ -1,5 +1,5 @@
-# Se construye con el contexto en la RAIZ del monorepo, para poder copiar
-# packages/bp-common (dependencia local via path-repository):
+# Built with the context at the monorepo ROOT, to be able to copy
+# packages/bp-common (local dependency via path-repository):
 #   docker build -f services/svc-transferencias/Dockerfile -t bp/svc-transferencias .
 
 FROM php:8.3-cli AS base
@@ -25,7 +25,7 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
 
 EXPOSE 8000
 
-# migrate --force es idempotente -- se corre en cada arranque. Depende de
-# que MySQL ya este sano (ver `depends_on: condition: service_healthy` en
-# docker-compose.yml) para no fallar por una conexion todavia no aceptada.
+# migrate --force is idempotent -- runs on every startup. Depends on MySQL
+# already being healthy (see `depends_on: condition: service_healthy` in
+# docker-compose.yml) to avoid failing on a connection not yet accepted.
 CMD ["sh", "-c", "php artisan migrate --force && php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000"]

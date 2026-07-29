@@ -8,12 +8,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Revalidacion de riesgo para operaciones sensibles (diagrama de secuencia
- * 8.2). A diferencia del onboarding, aqui SI hay un usuario autenticado
- * (esta operando dentro de la app), asi que la ruta esta protegida con
- * JwtAuthMiddleware -- se mediatiza a traves del BFF en vez de que la app
- * llame a AWS Rekognition directo, para no distribuir credenciales de AWS
- * en el cliente movil.
+ * Risk revalidation for sensitive operations (sequence diagram 8.2). Unlike
+ * onboarding, there IS an authenticated user here (already operating
+ * inside the app), so the route is protected with JwtAuthMiddleware -- it
+ * is mediated through the BFF instead of the app calling AWS Rekognition
+ * directly, to avoid distributing AWS credentials on the mobile client.
  */
 class LivenessController extends Controller
 {
@@ -24,12 +23,12 @@ class LivenessController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'selfie_referencia' => ['required', 'string'],
-            'selfie_nueva' => ['required', 'string'],
+            'reference_selfie' => ['required', 'string'],
+            'new_selfie' => ['required', 'string'],
         ]);
 
-        $resultado = $this->liveness->revalidar($validated['selfie_referencia'], $validated['selfie_nueva']);
+        $result = $this->liveness->revalidate($validated['reference_selfie'], $validated['new_selfie']);
 
-        return ApiResponse::success($resultado);
+        return ApiResponse::success($result);
     }
 }

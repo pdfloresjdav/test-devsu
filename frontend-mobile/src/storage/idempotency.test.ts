@@ -16,18 +16,18 @@ describe('idempotency (frontend-mobile)', () => {
     await AsyncStorage.clear();
   });
 
-  it('genera una clave nueva cuando no hay ninguna guardada', async () => {
+  it('generates a new key when none is stored', async () => {
     const key = await getOrCreateIdempotencyKey();
     expect(key).toMatch(/^test-uuid-\d+$/);
   });
 
-  it('reutiliza la misma clave en llamadas sucesivas (reintentos del mismo intento)', async () => {
+  it('reuses the same key across successive calls (retries of the same attempt)', async () => {
     const first = await getOrCreateIdempotencyKey();
     const second = await getOrCreateIdempotencyKey();
     expect(second).toBe(first);
   });
 
-  it('genera una clave distinta luego de reiniciar (nuevo intento)', async () => {
+  it('generates a different key after resetting (new attempt)', async () => {
     const first = await getOrCreateIdempotencyKey();
     await resetIdempotencyKey();
     const second = await getOrCreateIdempotencyKey();

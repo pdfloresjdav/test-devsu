@@ -36,18 +36,18 @@ return [
     ],
 
     'onboarding' => [
-        // KYC: 'fake' en desarrollo; 'http' activa Onfido/iProov real.
+        // KYC: 'fake' in development; 'http' activates real Onfido/iProov.
         'kyc_driver' => env('KYC_DRIVER', 'fake'),
         'kyc_base_url' => env('KYC_BASE_URL'),
         'kyc_api_key' => env('KYC_API_KEY'),
 
-        // Identidad: 'fake' en desarrollo (mock-oidc no tiene Management API
-        // real); 'auth0' activa la Management API real de Auth0.
+        // Identity: 'fake' in development (mock-oidc has no real Management
+        // API); 'auth0' activates the real Auth0 Management API.
         'identity_driver' => env('IDENTITY_DRIVER', 'fake'),
         'auth0_management_url' => env('AUTH0_MANAGEMENT_URL'),
         'auth0_management_token' => env('AUTH0_MANAGEMENT_TOKEN'),
 
-        // Liveness: 'fake' en desarrollo; 'aws' activa AWS Rekognition real.
+        // Liveness: 'fake' in development; 'aws' activates real AWS Rekognition.
         'liveness_driver' => env('LIVENESS_DRIVER', 'fake'),
         'aws_region' => env('AWS_REGION', 'us-east-1'),
     ],

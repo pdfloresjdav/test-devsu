@@ -9,10 +9,11 @@ use Psr\Http\Message\ResponseInterface;
 use Throwable;
 
 /**
- * Base comun para los clientes de los BFFs (Web y Movil) hacia los
- * microservicios de negocio: hace la llamada HTTP y traduce cualquier
- * falla a UpstreamServiceException preservando el status code real del
- * servicio (404, 422, etc.) en vez de aplanar todo a un error generico.
+ * Common base for the BFFs' (Web and Mobile) clients toward the business
+ * microservices: makes the HTTP call and translates any failure into an
+ * UpstreamServiceException preserving the real status code from the
+ * service (404, 422, etc.) instead of flattening everything into a
+ * generic error.
  */
 abstract class HttpUpstreamClient
 {
@@ -30,12 +31,12 @@ abstract class HttpUpstreamClient
         } catch (BadResponseException $e) {
             $status = $e->getResponse()->getStatusCode();
             $body = json_decode((string) $e->getResponse()->getBody(), true);
-            $mensaje = $body['error']['message'] ?? $e->getMessage();
-            $codigo = $body['error']['code'] ?? null;
+            $message = $body['error']['message'] ?? $e->getMessage();
+            $code = $body['error']['code'] ?? null;
 
-            throw new UpstreamServiceException($mensaje, $status, $codigo, $e);
+            throw new UpstreamServiceException($message, $status, $code, $e);
         } catch (GuzzleException|Throwable $e) {
-            throw new UpstreamServiceException("No se pudo contactar el servicio: {$e->getMessage()}", 502, previous: $e);
+            throw new UpstreamServiceException("Could not reach the service: {$e->getMessage()}", 502, previous: $e);
         }
     }
 

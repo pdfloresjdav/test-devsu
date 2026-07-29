@@ -10,21 +10,22 @@ use Throwable;
 use UnexpectedValueException;
 
 /**
- * Valida un JWT (firma, expiracion, issuer, audience) contra el JWKS del
- * emisor configurado. El mismo flujo sirve tanto para el mock-oidc local
- * como para Auth0/Okta real -- ver decision 3.5 del documento de arquitectura.
+ * Validates a JWT (signature, expiration, issuer, audience) against the
+ * configured issuer's JWKS. The same flow serves both the local mock-oidc
+ * and a real Auth0/Okta tenant -- see decision 3.5 of the architecture
+ * document.
  *
- * `$issuer` y `$discoveryIssuer` son conceptos distintos que en Fases 1-10
- * (todo corriendo en el host) coincidian siempre, pero divergen al
- * orquestar los servicios dentro de docker-compose (Fase 11): `$issuer` es
- * el valor exacto que trae el claim `iss` del token (el mismo que ve el
- * navegador, ej. http://localhost:4011, porque ahi es donde el SPA/app
- * movil inicio sesion) -- eso NO cambia. `$discoveryIssuer` es la URL por
- * la que ESTE proceso puede alcanzar fisicamente el emisor para bajar su
- * documento de discovery y su JWKS (ej. http://mock-oidc:80 dentro de la
- * red de docker-compose, un nombre de host que el navegador no resuelve
- * pero un contenedor si). Si no se especifica, se asume igual a `$issuer`
- * (comportamiento anterior, valido cuando todo corre en el mismo host).
+ * `$issuer` and `$discoveryIssuer` are distinct concepts that in Phases
+ * 1-10 (everything running on the host) always matched, but diverge once
+ * the services are orchestrated inside docker-compose (Phase 11): `$issuer`
+ * is the exact value carried by the token's `iss` claim (the same one the
+ * browser sees, e.g. http://localhost:4011, because that's where the
+ * SPA/mobile app logged in) -- that does NOT change. `$discoveryIssuer` is
+ * the URL by which THIS process can physically reach the issuer to fetch
+ * its discovery document and JWKS (e.g. http://mock-oidc:80 inside the
+ * docker-compose network, a hostname the browser can't resolve but a
+ * container can). If not specified, it's assumed to be the same as
+ * `$issuer` (previous behavior, valid when everything runs on the same host).
  */
 class JwtValidator
 {
@@ -40,9 +41,9 @@ class JwtValidator
     }
 
     /**
-     * @return array<string, mixed> Claims del token si es valido.
+     * @return array<string, mixed> The token's claims if valid.
      *
-     * @throws JwtValidationException si la firma, expiracion, issuer o audience no son validos.
+     * @throws JwtValidationException if the signature, expiration, issuer, or audience are invalid.
      */
     public function validate(string $token): array
     {
@@ -52,9 +53,9 @@ class JwtValidator
             $keys = JWK::parseKeySet($jwks);
             $decoded = JWT::decode($token, $keys);
         } catch (SignatureInvalidException $e) {
-            throw new JwtValidationException('Firma del token invalida.', previous: $e);
+            throw new JwtValidationException('Invalid token signature.', previous: $e);
         } catch (UnexpectedValueException|Throwable $e) {
-            throw new JwtValidationException("Token invalido: {$e->getMessage()}", previous: $e);
+            throw new JwtValidationException("Invalid token: {$e->getMessage()}", previous: $e);
         }
 
         $claims = $this->toArray($decoded);
@@ -82,7 +83,7 @@ class JwtValidator
         $expectedIssuer = rtrim($this->issuer, '/');
 
         if ($tokenIssuer !== $expectedIssuer) {
-            throw new JwtValidationException("Issuer inesperado: se esperaba [{$expectedIssuer}], vino [{$tokenIssuer}].");
+            throw new JwtValidationException("Unexpected issuer: expected [{$expectedIssuer}], got [{$tokenIssuer}].");
         }
     }
 
@@ -95,7 +96,7 @@ class JwtValidator
         $audiences = is_array($audienceClaim) ? $audienceClaim : [$audienceClaim];
 
         if (! in_array($this->audience, $audiences, true)) {
-            throw new JwtValidationException("Audience inesperada: se esperaba [{$this->audience}].");
+            throw new JwtValidationException("Unexpected audience: expected [{$this->audience}].");
         }
     }
 }

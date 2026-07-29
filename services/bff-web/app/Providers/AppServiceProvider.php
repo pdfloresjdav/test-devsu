@@ -6,11 +6,11 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    // Los clientes hacia Datos Basicos, Movimientos y Transferencias (y el
-    // ClientInterface de Guzzle que usan) ya vienen registrados por
-    // BpCommonServiceProvider (packages/bp-common) -- ver
-    // bp-common.internal_services.* en config/bp-common.php y las mismas
-    // variables *_BASE_URL en el .env de este servicio.
+    // The clients toward Customer Data, Movements and Transfers (and the
+    // Guzzle ClientInterface they use) are already registered by
+    // BpCommonServiceProvider (packages/bp-common) -- see
+    // bp-common.internal_services.* in config/bp-common.php and the same
+    // *_BASE_URL variables in this service's .env.
 
     public function register(): void
     {

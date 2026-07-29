@@ -1,5 +1,5 @@
-# Se construye con el contexto en la RAIZ del monorepo, para poder copiar
-# packages/bp-common (dependencia local via path-repository):
+# Built with the context at the monorepo ROOT, to be able to copy
+# packages/bp-common (local dependency via path-repository):
 #   docker build -f services/svc-datos-basicos/Dockerfile -t bp/svc-datos-basicos .
 
 FROM php:8.3-cli AS base
@@ -25,7 +25,7 @@ RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
 
 EXPOSE 8000
 
-# migrate --force es idempotente (Laravel salta lo ya aplicado) -- seguro
-# de correr en cada arranque del contenedor, incluida la orquestacion de
-# la Fase 11 con `docker compose up`.
+# migrate --force is idempotent (Laravel skips what's already applied) --
+# safe to run on every container startup, including the Fase 11
+# orchestration with `docker compose up`.
 CMD ["sh", "-c", "touch database/database.sqlite && php artisan migrate --force && php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000"]

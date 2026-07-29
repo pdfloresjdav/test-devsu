@@ -8,10 +8,11 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Traduce un evento de dominio en una o mas notificaciones: decide el(los)
- * canal(es) (ChannelRouter), genera el contenido (TemplateEngine), las
- * envia (NotificationChannel) y registra el resultado (DeliveryTracker).
- * Separado del consumidor de SQS para poder probarlo sin una cola real.
+ * Translates a domain event into one or more notifications: decides the
+ * channel(s) (ChannelRouter), generates the content (TemplateEngine), sends
+ * them (NotificationChannel) and records the result (DeliveryTracker).
+ * Kept separate from the SQS consumer so it can be tested without a real
+ * queue.
  */
 class NotificationEventProcessor
 {
@@ -26,30 +27,30 @@ class NotificationEventProcessor
     /**
      * @param array<string, mixed> $eventBridgeEvent
      */
-    public function procesar(array $eventBridgeEvent): void
+    public function process(array $eventBridgeEvent): void
     {
-        $accion = $eventBridgeEvent['detail-type'] ?? null;
-        $detalle = $eventBridgeEvent['detail'] ?? null;
+        $action = $eventBridgeEvent['detail-type'] ?? null;
+        $detail = $eventBridgeEvent['detail'] ?? null;
 
-        if (! is_string($accion) || ! is_array($detalle)) {
-            throw new RuntimeException('Evento invalido: falta detail-type o detail.');
+        if (! is_string($action) || ! is_array($detail)) {
+            throw new RuntimeException('Invalid event: missing detail-type or detail.');
         }
 
-        $actor = $detalle['actor'] ?? 'system';
-        ['subject' => $subject, 'body' => $body] = $this->templates->render($accion, $detalle);
+        $actor = $detail['actor'] ?? 'system';
+        ['subject' => $subject, 'body' => $body] = $this->templates->render($action, $detail);
 
-        foreach ($this->router->canalesPara($accion) as $canal) {
-            $this->enviarPorCanal($canal, $actor, $accion, $subject, $body);
+        foreach ($this->router->channelsFor($action) as $channel) {
+            $this->sendByChannel($channel, $actor, $action, $subject, $body);
         }
     }
 
-    private function enviarPorCanal(string $canal, string $actor, string $accion, string $subject, string $body): void
+    private function sendByChannel(string $channel, string $actor, string $action, string $subject, string $body): void
     {
         try {
-            $this->channels->make($canal)->send($actor, $subject, $body);
-            $this->tracker->registrar($actor, $canal, $accion, 'enviado');
+            $this->channels->make($channel)->send($actor, $subject, $body);
+            $this->tracker->register($actor, $channel, $action, 'sent');
         } catch (NotificationDeliveryException $e) {
-            $this->tracker->registrar($actor, $canal, $accion, 'fallido', $e->getMessage());
+            $this->tracker->register($actor, $channel, $action, 'failed', $e->getMessage());
         }
     }
 }

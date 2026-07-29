@@ -32,7 +32,7 @@ class DpopValidatorTest extends TestCase
         );
     }
 
-    public function test_valida_un_dpop_proof_correcto(): void
+    public function test_validates_a_correct_dpop_proof(): void
     {
         $keyPair = new RsaKeyPair();
         $validator = new DpopValidator(new InMemoryDpopReplayStore());
@@ -44,7 +44,7 @@ class DpopValidatorTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    public function test_rechaza_si_el_metodo_http_no_coincide(): void
+    public function test_rejects_if_the_http_method_does_not_match(): void
     {
         $keyPair = new RsaKeyPair();
         $validator = new DpopValidator(new InMemoryDpopReplayStore());
@@ -54,21 +54,21 @@ class DpopValidatorTest extends TestCase
         $validator->validate($proof, 'POST', 'http://localhost/transfers');
     }
 
-    public function test_rechaza_si_la_url_no_coincide(): void
+    public function test_rejects_if_the_url_does_not_match(): void
     {
         $keyPair = new RsaKeyPair();
         $validator = new DpopValidator(new InMemoryDpopReplayStore());
-        $proof = $this->buildProof($keyPair, ['htu' => 'http://localhost/otra-cosa']);
+        $proof = $this->buildProof($keyPair, ['htu' => 'http://localhost/something-else']);
 
         $this->expectException(DpopValidationException::class);
         $validator->validate($proof, 'POST', 'http://localhost/transfers');
     }
 
-    public function test_rechaza_un_proof_reutilizado_replay(): void
+    public function test_rejects_a_reused_proof_replay(): void
     {
         $keyPair = new RsaKeyPair();
         $validator = new DpopValidator(new InMemoryDpopReplayStore());
-        $proof = $this->buildProof($keyPair, [], jti: 'jti-fijo');
+        $proof = $this->buildProof($keyPair, [], jti: 'fixed-jti');
 
         $validator->validate($proof, 'POST', 'http://localhost/transfers');
 
@@ -77,7 +77,7 @@ class DpopValidatorTest extends TestCase
         $validator->validate($proof, 'POST', 'http://localhost/transfers');
     }
 
-    public function test_rechaza_un_iat_fuera_de_tolerancia(): void
+    public function test_rejects_an_iat_outside_the_tolerance(): void
     {
         $keyPair = new RsaKeyPair();
         $validator = new DpopValidator(new InMemoryDpopReplayStore(), iatLeewaySeconds: 30);
@@ -87,7 +87,7 @@ class DpopValidatorTest extends TestCase
         $validator->validate($proof, 'POST', 'http://localhost/transfers');
     }
 
-    public function test_valida_el_amarre_al_cnf_jkt_del_access_token(): void
+    public function test_validates_the_binding_to_the_access_tokens_cnf_jkt(): void
     {
         $keyPair = new RsaKeyPair();
         $validator = new DpopValidator(new InMemoryDpopReplayStore());
@@ -102,18 +102,18 @@ class DpopValidatorTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    public function test_rechaza_si_el_cnf_jkt_no_coincide(): void
+    public function test_rejects_if_the_cnf_jkt_does_not_match(): void
     {
         $keyPair = new RsaKeyPair();
-        $otraLlave = new RsaKeyPair('otra');
+        $otherKey = new RsaKeyPair('other');
         $validator = new DpopValidator(new InMemoryDpopReplayStore());
         $proof = $this->buildProof($keyPair);
 
-        $otraJwk = $otraLlave->toJwks()['keys'][0];
-        unset($otraJwk['kid'], $otraJwk['use']);
-        $thumbprintDeOtraLlave = $validator->jwkThumbprint($otraJwk);
+        $otherJwk = $otherKey->toJwks()['keys'][0];
+        unset($otherJwk['kid'], $otherJwk['use']);
+        $otherKeyThumbprint = $validator->jwkThumbprint($otherJwk);
 
         $this->expectException(DpopValidationException::class);
-        $validator->validate($proof, 'POST', 'http://localhost/transfers', $thumbprintDeOtraLlave);
+        $validator->validate($proof, 'POST', 'http://localhost/transfers', $otherKeyThumbprint);
     }
 }

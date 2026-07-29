@@ -35,16 +35,16 @@ return [
         ],
     ],
 
-    // Decision 3.11 (API Composition): 'fake' mientras el Core Bancario real
-    // no exista; 'http' para apuntar al sistema real el dia que este arriba.
-    'core_bancario' => [
-        'driver' => env('CORE_BANCARIO_DRIVER', 'fake'),
-        'base_url' => env('CORE_BANCARIO_BASE_URL'),
+    // Decision 3.11 (API Composition): 'fake' while the real Core Banking
+    // system doesn't exist yet; 'http' to point at the real system once it's up.
+    'core_banking' => [
+        'driver' => env('CORE_BANKING_DRIVER', 'fake'),
+        'base_url' => env('CORE_BANKING_BASE_URL'),
     ],
 
-    'cliente_complementario' => [
-        'driver' => env('CLIENTE_COMPLEMENTARIO_DRIVER', 'fake'),
-        'base_url' => env('CLIENTE_COMPLEMENTARIO_BASE_URL'),
+    'customer_profile' => [
+        'driver' => env('CUSTOMER_PROFILE_DRIVER', 'fake'),
+        'base_url' => env('CUSTOMER_PROFILE_BASE_URL'),
     ],
 
 ];

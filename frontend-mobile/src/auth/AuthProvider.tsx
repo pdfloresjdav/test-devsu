@@ -5,7 +5,7 @@ import { deleteSecureItem, getSecureItem, setSecureItem } from '../storage/secur
 import { isBiometricAvailable, promptBiometric } from './biometric';
 import { OIDC_CLIENT_ID, OIDC_ISSUER, OIDC_SCOPES, REFRESH_TOKEN_STORAGE_KEY } from './authConfig';
 
-// Requerido por expo-auth-session en web para cerrar el popup de login al terminar.
+// Required by expo-auth-session on web to close the login popup when done.
 WebBrowser.maybeCompleteAuthSession();
 
 export interface AuthContextValue {
@@ -15,29 +15,28 @@ export interface AuthContextValue {
   biometricAvailable: boolean;
   accessToken: string | null;
   request: AuthSession.AuthRequest | null;
-  registrarCredencial: () => Promise<{ ok: boolean; error?: string }>;
-  loginRecurrente: () => Promise<{ ok: boolean; error?: string }>;
+  registerCredential: () => Promise<{ ok: boolean; error?: string }>;
+  recurringLogin: () => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /**
- * Orquesta los items 10.3 (registro de credencial atada a biometría) y
- * 10.4 (login recurrente sin volver a pasar por el proveedor KYC).
+ * Orchestrates items 10.3 (credential registration tied to biometrics) and
+ * 10.4 (recurring login without going through the KYC provider again).
  *
- * Simplificación de alcance documentada en WORKLOG.md: mock-oidc no
- * implementa un ceremonial WebAuthn/FIDO2 real (registro de passkey contra
- * un Relying Party) — no hay forma de probarlo contra la infraestructura
- * local de este proyecto. En su lugar, "registrar la credencial" hace el
- * login Authorization Code + PKCE normal (con el usuario demo ya
- * precargado en mock-oidc) y ata el acceso al refresh_token resultante
- * detrás de un gate de biometría nativa (Face ID / BiometricPrompt vía
- * expo-local-authentication) — la misma propiedad de seguridad que
- * describe la decisión 3.7 del documento de arquitectura (el dato
- * biométrico nunca sale del dispositivo, y el login recurrente no repite
- * la verificación KYC), lograda sin necesitar un servidor WebAuthn que no
- * existe en este ejercicio.
+ * Scope simplification documented in WORKLOG.md: mock-oidc doesn't
+ * implement a real WebAuthn/FIDO2 ceremony (passkey registration against a
+ * Relying Party) -- there's no way to test it against this project's local
+ * infrastructure. Instead, "registering the credential" does the normal
+ * Authorization Code + PKCE login (with the demo user already preloaded in
+ * mock-oidc) and ties access to the resulting refresh_token behind a
+ * native biometric gate (Face ID / BiometricPrompt via
+ * expo-local-authentication) -- the same security property described in
+ * architecture document decision 3.7 (the biometric data never leaves the
+ * device, and recurring login doesn't repeat KYC verification), achieved
+ * without needing a WebAuthn server that doesn't exist in this exercise.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const discovery = AuthSession.useAutoDiscovery(OIDC_ISSUER);
@@ -67,15 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const registrarCredencial = async (): Promise<{ ok: boolean; error?: string }> => {
+  const registerCredential = async (): Promise<{ ok: boolean; error?: string }> => {
     if (!discovery) {
-      return { ok: false, error: 'El emisor OIDC todavía no respondió el discovery document.' };
+      return { ok: false, error: 'The OIDC issuer has not answered the discovery document yet.' };
     }
 
     const result = await promptAsync();
 
     if (result.type !== 'success') {
-      return { ok: false, error: 'Inicio de sesión cancelado o rechazado.' };
+      return { ok: false, error: 'Login canceled or rejected.' };
     }
 
     const tokens = await AuthSession.exchangeCodeAsync(
@@ -91,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!tokens.refreshToken) {
       return {
         ok: false,
-        error: 'El emisor no devolvió un refresh_token (revisar scope offline_access).',
+        error: 'The issuer did not return a refresh_token (check the offline_access scope).',
       };
     }
 
@@ -99,10 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBiometricAvailable(biometric);
 
     if (biometric) {
-      const confirmed = await promptBiometric('Confirmá tu identidad para vincular el acceso');
+      const confirmed = await promptBiometric('Confirm your identity to link access');
 
       if (!confirmed) {
-        return { ok: false, error: 'No se pudo confirmar la biometría. Probá de nuevo.' };
+        return { ok: false, error: 'Could not confirm biometrics. Please try again.' };
       }
     }
 
@@ -113,22 +112,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   };
 
-  const loginRecurrente = async (): Promise<{ ok: boolean; error?: string }> => {
+  const recurringLogin = async (): Promise<{ ok: boolean; error?: string }> => {
     if (!discovery) {
-      return { ok: false, error: 'El emisor OIDC todavía no respondió el discovery document.' };
+      return { ok: false, error: 'The OIDC issuer has not answered the discovery document yet.' };
     }
 
     const storedRefreshToken = await getSecureItem(REFRESH_TOKEN_STORAGE_KEY);
 
     if (!storedRefreshToken) {
-      return { ok: false, error: 'No hay una credencial vinculada en este dispositivo.' };
+      return { ok: false, error: 'There is no credential linked on this device.' };
     }
 
     if (biometricAvailable) {
-      const confirmed = await promptBiometric('Confirmá tu identidad para continuar');
+      const confirmed = await promptBiometric('Confirm your identity to continue');
 
       if (!confirmed) {
-        return { ok: false, error: 'Biometría no confirmada.' };
+        return { ok: false, error: 'Biometrics not confirmed.' };
       }
     }
 
@@ -158,8 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     biometricAvailable,
     accessToken,
     request,
-    registrarCredencial,
-    loginRecurrente,
+    registerCredential,
+    recurringLogin,
     logout,
   };
 

@@ -8,23 +8,24 @@ use Illuminate\Console\Command;
 use Throwable;
 
 /**
- * Consumidor de la cola SQS que recibe los eventos de dominio ruteados por
- * EventBridge (patron Pub/Sub, decision 3.13). Este comando ES el "Laravel
- * Horizon Worker" del diagrama de contenedores -- en produccion corre como
- * proceso de larga duracion dentro de la tarea de ECS Fargate; Horizon en
- * si mismo supervisa colas internas de Laravel (Redis/database), que no es
- * la fuente de estos mensajes (vienen de SQS con el sobre de EventBridge),
- * asi que el long-polling se hace directo contra el SDK de AWS.
+ * Consumer of the SQS queue that receives domain events routed by
+ * EventBridge (Pub/Sub pattern, decision 3.13). This command IS the
+ * "Laravel Horizon Worker" from the container diagram -- in production it
+ * runs as a long-lived process inside the ECS Fargate task; Horizon
+ * itself supervises Laravel's internal queues (Redis/database), which
+ * isn't the source of these messages (they come from SQS with the
+ * EventBridge envelope), so the long-polling is done directly against the
+ * AWS SDK.
  */
 class ConsumeAuditEvents extends Command
 {
-    protected $signature = 'audit:consume {--once : Procesa un unico ciclo de recepcion y termina (para tests/depuracion)}';
+    protected $signature = 'audit:consume {--once : Processes a single receive cycle and exits (for tests/debugging)}';
 
-    protected $description = 'Consume eventos de dominio desde SQS y los persiste como registros de auditoria';
+    protected $description = 'Consumes domain events from SQS and persists them as audit records';
 
     public function handle(SqsClient $sqs, AuditEventProcessor $processor): int
     {
-        $queueUrl = config('services.auditoria.queue_url');
+        $queueUrl = config('services.audit.queue_url');
 
         do {
             $result = $sqs->receiveMessage([
@@ -34,7 +35,7 @@ class ConsumeAuditEvents extends Command
             ]);
 
             foreach ($result['Messages'] ?? [] as $message) {
-                $this->procesarMensaje($sqs, $queueUrl, $message, $processor);
+                $this->processMessage($sqs, $queueUrl, $message, $processor);
             }
         } while (! $this->option('once'));
 
@@ -44,24 +45,25 @@ class ConsumeAuditEvents extends Command
     /**
      * @param array<string, mixed> $message
      */
-    private function procesarMensaje(SqsClient $sqs, string $queueUrl, array $message, AuditEventProcessor $processor): void
+    private function processMessage(SqsClient $sqs, string $queueUrl, array $message, AuditEventProcessor $processor): void
     {
         try {
-            $evento = json_decode($message['Body'], true, flags: JSON_THROW_ON_ERROR);
-            $processor->procesar($evento);
+            $event = json_decode($message['Body'], true, flags: JSON_THROW_ON_ERROR);
+            $processor->process($event);
 
             $sqs->deleteMessage([
                 'QueueUrl' => $queueUrl,
                 'ReceiptHandle' => $message['ReceiptHandle'],
             ]);
 
-            $this->info("Auditado: {$evento['detail-type']} ({$message['MessageId']})");
+            $this->info("Audited: {$event['detail-type']} ({$message['MessageId']})");
         } catch (Throwable $e) {
-            // No se borra el mensaje: al vencer la visibilidad vuelve a
-            // aparecer en la cola: y tras varios intentos fallidos, SQS lo
-            // manda solo a la DLQ (redrive policy configurada en
-            // audit:setup-queue). No queremos perder el evento.
-            $this->error("No se pudo procesar el mensaje {$message['MessageId']}: {$e->getMessage()}");
+            // The message isn't deleted: once its visibility expires it
+            // reappears on the queue, and after several failed attempts
+            // SQS moves it to the DLQ on its own (redrive policy
+            // configured in audit:setup-infrastructure). We don't want to
+            // lose the event.
+            $this->error("Could not process message {$message['MessageId']}: {$e->getMessage()}");
         }
     }
 }

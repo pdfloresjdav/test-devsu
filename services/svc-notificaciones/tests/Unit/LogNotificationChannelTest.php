@@ -8,17 +8,17 @@ use Tests\TestCase;
 
 class LogNotificationChannelTest extends TestCase
 {
-    public function test_deja_el_canal_destinatario_y_contenido_en_el_log(): void
+    public function test_leaves_the_channel_recipient_and_content_in_the_log(): void
     {
         Log::spy();
 
-        (new LogNotificationChannel('push'))->send('user-abc', 'Asunto de prueba', 'Cuerpo de prueba');
+        (new LogNotificationChannel('push'))->send('user-abc', 'Test subject', 'Test body');
 
-        Log::shouldHaveReceived('info')->once()->withArgs(function (string $mensaje, array $contexto) {
-            return $contexto['canal'] === 'push'
-                && $contexto['destinatario'] === 'user-abc'
-                && $contexto['subject'] === 'Asunto de prueba'
-                && $contexto['body'] === 'Cuerpo de prueba';
+        Log::shouldHaveReceived('info')->once()->withArgs(function (string $message, array $context) {
+            return $context['channel'] === 'push'
+                && $context['recipient'] === 'user-abc'
+                && $context['subject'] === 'Test subject'
+                && $context['body'] === 'Test body';
         });
     }
 }

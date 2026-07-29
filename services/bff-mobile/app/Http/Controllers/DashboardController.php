@@ -18,10 +18,10 @@ class DashboardController extends Controller
     {
     }
 
-    public function show(string $cuentaId, Request $request): JsonResponse
+    public function show(string $accountId, Request $request): JsonResponse
     {
         try {
-            $data = $this->dashboard->obtener($cuentaId, JwtClaims::bearerToken($request));
+            $data = $this->dashboard->get($accountId, JwtClaims::bearerToken($request));
         } catch (UpstreamServiceException $e) {
             return $this->upstreamError($e);
         }

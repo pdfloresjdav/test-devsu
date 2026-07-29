@@ -10,10 +10,10 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Exige un header Idempotency-Key en /transfers y sirve la respuesta ya
- * cacheada si la misma clave ya se proceso -- evita procesar dos veces una
- * transferencia cuando el cliente reintenta por timeout (decision 3.4,
- * diagrama de secuencia 8.1).
+ * Requires an Idempotency-Key header on /transfers and serves the already
+ * cached response if the same key was already processed -- avoids
+ * processing a transfer twice when the client retries due to a timeout
+ * (decision 3.4, sequence diagram 8.1).
  */
 class IdempotencyMiddleware
 {
@@ -28,7 +28,7 @@ class IdempotencyMiddleware
         $idempotencyKey = $request->header('Idempotency-Key');
 
         if (! $idempotencyKey) {
-            return ApiResponse::error('Falta el header Idempotency-Key.', 'missing_idempotency_key', status: 400);
+            return ApiResponse::error('Missing Idempotency-Key header.', 'missing_idempotency_key', status: 400);
         }
 
         $cacheKey = "idempotency:transfers:{$idempotencyKey}";
@@ -42,16 +42,16 @@ class IdempotencyMiddleware
 
         $response = $next($request);
 
-        // Si un error no controlado en capas de mas abajo produce una
-        // respuesta que no es JSON (ej. la pagina de error generica de
-        // Laravel para una Exception no manejada, en vez de un
-        // ApiResponse::error), no hay nada serializable para cachear bajo
-        // la Idempotency-Key -- y cachear un 500 generico seria ademas
-        // incorrecto (el cliente deberia poder reintentar). Se deja pasar
-        // la respuesta tal cual, sin ocultar el error real detras de un
-        // BadMethodCallException por llamar a getData() en algo que no es
-        // un JsonResponse (encontrado en la Fase 11 con un bug real de
-        // bcmath faltante que este catch estaba enmascarando).
+        // If an uncontrolled error further down the stack produces a
+        // response that isn't JSON (e.g. Laravel's generic error page for
+        // an unhandled Exception, instead of an ApiResponse::error),
+        // there's nothing serializable to cache under the Idempotency-Key
+        // -- and caching a generic 500 would also be incorrect (the client
+        // should be able to retry). The response is passed through as-is,
+        // without hiding the real error behind a BadMethodCallException
+        // from calling getData() on something that isn't a JsonResponse
+        // (found in Phase 11 with a real missing-bcmath bug that this
+        // catch was masking).
         if ($response instanceof JsonResponse) {
             $this->cache->put($cacheKey, [
                 'status' => $response->getStatusCode(),

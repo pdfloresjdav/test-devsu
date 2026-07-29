@@ -35,10 +35,10 @@ return [
         ],
     ],
 
-    'movimientos' => [
-        'table' => env('MOVIMIENTOS_TABLE', 'movimientos'),
-        'cache_store' => env('MOVIMIENTOS_CACHE_STORE', 'redis'),
-        'cache_ttl_seconds' => (int) env('MOVIMIENTOS_CACHE_TTL_SECONDS', 60),
+    'movements' => [
+        'table' => env('MOVEMENTS_TABLE', 'movements'),
+        'cache_store' => env('MOVEMENTS_CACHE_STORE', 'redis'),
+        'cache_ttl_seconds' => (int) env('MOVEMENTS_CACHE_TTL_SECONDS', 60),
     ],
 
 ];

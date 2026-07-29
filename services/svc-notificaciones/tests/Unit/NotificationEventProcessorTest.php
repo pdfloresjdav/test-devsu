@@ -14,57 +14,57 @@ use RuntimeException;
 
 class NotificationEventProcessorTest extends TestCase
 {
-    public function test_envia_por_cada_canal_y_registra_el_exito(): void
+    public function test_sends_through_each_channel_and_records_success(): void
     {
         $router = $this->createMock(ChannelRouter::class);
-        $router->method('canalesPara')->with('TransferFailed')->willReturn(['push', 'email']);
+        $router->method('channelsFor')->with('TransferFailed')->willReturn(['push', 'email']);
 
         $templates = $this->createMock(TemplateEngine::class);
-        $templates->method('render')->willReturn(['subject' => 'Asunto', 'body' => 'Cuerpo']);
+        $templates->method('render')->willReturn(['subject' => 'Subject', 'body' => 'Body']);
 
         $channel = $this->createMock(NotificationChannel::class);
-        $channel->expects($this->exactly(2))->method('send')->with('user-abc', 'Asunto', 'Cuerpo');
+        $channel->expects($this->exactly(2))->method('send')->with('user-abc', 'Subject', 'Body');
 
         $factory = $this->createMock(NotificationChannelFactory::class);
         $factory->method('make')->willReturn($channel);
 
         $tracker = $this->createMock(DeliveryTracker::class);
-        $tracker->expects($this->exactly(2))->method('registrar')->with('user-abc', $this->isType('string'), 'TransferFailed', 'enviado');
+        $tracker->expects($this->exactly(2))->method('register')->with('user-abc', $this->isType('string'), 'TransferFailed', 'sent');
 
         $processor = new NotificationEventProcessor($router, $templates, $factory, $tracker);
 
-        $processor->procesar([
+        $processor->process([
             'detail-type' => 'TransferFailed',
-            'detail' => ['actor' => 'user-abc', 'monto' => 100],
+            'detail' => ['actor' => 'user-abc', 'amount' => 100],
         ]);
     }
 
-    public function test_registra_fallido_si_el_canal_no_pudo_entregar(): void
+    public function test_records_failed_if_the_channel_could_not_deliver(): void
     {
         $router = $this->createMock(ChannelRouter::class);
-        $router->method('canalesPara')->willReturn(['push']);
+        $router->method('channelsFor')->willReturn(['push']);
 
         $templates = $this->createMock(TemplateEngine::class);
-        $templates->method('render')->willReturn(['subject' => 'Asunto', 'body' => 'Cuerpo']);
+        $templates->method('render')->willReturn(['subject' => 'Subject', 'body' => 'Body']);
 
         $channel = $this->createMock(NotificationChannel::class);
-        $channel->method('send')->willThrowException(new NotificationDeliveryException('proveedor caido'));
+        $channel->method('send')->willThrowException(new NotificationDeliveryException('provider down'));
 
         $factory = $this->createMock(NotificationChannelFactory::class);
         $factory->method('make')->willReturn($channel);
 
         $tracker = $this->createMock(DeliveryTracker::class);
-        $tracker->expects($this->once())->method('registrar')->with('user-abc', 'push', 'MovementRegistered', 'fallido', 'proveedor caido');
+        $tracker->expects($this->once())->method('register')->with('user-abc', 'push', 'MovementRegistered', 'failed', 'provider down');
 
         $processor = new NotificationEventProcessor($router, $templates, $factory, $tracker);
 
-        $processor->procesar([
+        $processor->process([
             'detail-type' => 'MovementRegistered',
             'detail' => ['actor' => 'user-abc'],
         ]);
     }
 
-    public function test_rechaza_un_evento_sin_detail(): void
+    public function test_rejects_an_event_without_detail(): void
     {
         $processor = new NotificationEventProcessor(
             $this->createMock(ChannelRouter::class),
@@ -74,6 +74,6 @@ class NotificationEventProcessorTest extends TestCase
         );
 
         $this->expectException(RuntimeException::class);
-        $processor->procesar(['detail-type' => 'MovementRegistered']);
+        $processor->process(['detail-type' => 'MovementRegistered']);
     }
 }

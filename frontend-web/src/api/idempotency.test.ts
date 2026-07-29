@@ -6,18 +6,18 @@ describe('idempotency', () => {
     sessionStorage.clear();
   });
 
-  it('genera una clave nueva cuando no hay ninguna guardada', () => {
+  it('generates a new key when none is stored', () => {
     const key = getOrCreateIdempotencyKey();
     expect(key).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('reutiliza la misma clave en llamadas sucesivas (reintentos del mismo intento)', () => {
+  it('reuses the same key across successive calls (retries of the same attempt)', () => {
     const first = getOrCreateIdempotencyKey();
     const second = getOrCreateIdempotencyKey();
     expect(second).toBe(first);
   });
 
-  it('genera una clave distinta luego de reiniciar (nuevo intento)', () => {
+  it('generates a different key after resetting (new attempt)', () => {
     const first = getOrCreateIdempotencyKey();
     resetIdempotencyKey();
     const second = getOrCreateIdempotencyKey();

@@ -8,11 +8,11 @@ use Aws\DynamoDb\Marshaler;
 use Illuminate\Support\Str;
 
 /**
- * Persiste el rastro de auditoria en DynamoDB (LocalStack en local, AWS
- * real en produccion -- mismo codigo, mismo patron que el resto del
- * proyecto). Clave: actor (partition) + sort_key = "timestamp#audit_id"
- * (range), para poder consultar el historial de un actor en orden
- * cronologico si en el futuro se agrega un endpoint de consulta.
+ * Persists the audit trail in DynamoDB (LocalStack locally, real AWS in
+ * production -- same code, same pattern as the rest of the project). Key:
+ * actor (partition) + sort_key = "timestamp#audit_id" (range), so an
+ * actor's history can be queried in chronological order if a query
+ * endpoint is added in the future.
  */
 class DynamoDbAuditRepository implements AuditRepository
 {
@@ -23,18 +23,18 @@ class DynamoDbAuditRepository implements AuditRepository
     ) {
     }
 
-    public function registrar(string $actor, string $accion, array $detalle): array
+    public function register(string $actor, string $action, array $detail): array
     {
         $timestamp = now()->toIso8601ZuluString('microsecond');
         $auditId = (string) Str::uuid();
-        $hash = $this->calcularHash($actor, $accion, $detalle, $timestamp);
+        $hash = $this->calculateHash($actor, $action, $detail, $timestamp);
 
         $item = [
             'actor' => $actor,
             'sort_key' => "{$timestamp}#{$auditId}",
             'audit_id' => $auditId,
-            'accion' => $accion,
-            'detalle' => $detalle,
+            'action' => $action,
+            'detail' => $detail,
             'hash' => $hash,
             'timestamp' => $timestamp,
         ];
@@ -50,17 +50,17 @@ class DynamoDbAuditRepository implements AuditRepository
     }
 
     /**
-     * Hash de integridad del registro (no es un mecanismo de inmutabilidad
-     * por si solo -- eso lo da el WORM Archiver en S3 Object Lock en AWS
-     * real -- sino evidencia de que el contenido no fue alterado despues
-     * de escrito).
+     * Integrity hash of the record (it's not an immutability mechanism by
+     * itself -- that's provided by the WORM Archiver via S3 Object Lock on
+     * real AWS -- but evidence that the content wasn't altered after it
+     * was written).
      *
-     * @param array<string, mixed> $detalle
+     * @param array<string, mixed> $detail
      */
-    private function calcularHash(string $actor, string $accion, array $detalle, string $timestamp): string
+    private function calculateHash(string $actor, string $action, array $detail, string $timestamp): string
     {
-        $canonico = json_encode([$actor, $accion, $detalle, $timestamp], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $canonical = json_encode([$actor, $action, $detail, $timestamp], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        return hash('sha256', $canonico);
+        return hash('sha256', $canonical);
     }
 }

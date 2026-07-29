@@ -3,9 +3,9 @@
 namespace BP\Common\Auth;
 
 /**
- * Cache en memoria de proceso. Suficiente para Octane (vive mientras el worker
- * este arriba) y para tests; en produccion un servicio puede sustituirla por
- * una implementacion sobre Redis si necesita compartir el cache entre workers.
+ * In-process memory cache. Good enough for Octane (lives as long as the
+ * worker is up) and for tests; in production a service can swap it for a
+ * Redis-backed implementation if it needs to share the cache across workers.
  */
 class ArrayJwksCache implements JwksCacheInterface
 {

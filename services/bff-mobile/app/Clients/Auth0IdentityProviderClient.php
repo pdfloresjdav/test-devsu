@@ -8,10 +8,10 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Implementacion real contra la Management API de Auth0 (decision 3.5).
- * Requiere un cliente M2M (client_credentials) con el scope
- * create:users, configurado por separado del cliente publico que usan
- * la SPA/App (bp-web). No se prueba contra un tenant real.
+ * Real implementation against the Auth0 Management API (decision 3.5).
+ * Requires an M2M client (client_credentials) with the create:users scope,
+ * configured separately from the public client used by the SPA/App
+ * (bp-web). Not tested against a real tenant.
  */
 class Auth0IdentityProviderClient implements IdentityProviderClient
 {
@@ -22,7 +22,7 @@ class Auth0IdentityProviderClient implements IdentityProviderClient
     ) {
     }
 
-    public function crearUsuario(string $clienteId, string $nombre, string $email): array
+    public function createUser(string $customerId, string $name, string $email): array
     {
         try {
             $response = $this->httpClient->request('POST', rtrim($this->managementApiUrl, '/') . '/api/v2/users', [
@@ -30,17 +30,17 @@ class Auth0IdentityProviderClient implements IdentityProviderClient
                 'json' => [
                     'connection' => 'Username-Password-Authentication',
                     'email' => $email,
-                    'name' => $nombre,
-                    'app_metadata' => ['cliente_id' => $clienteId],
-                    'password' => bin2hex(random_bytes(16)) . 'Aa1!', // se reemplaza cuando el cliente registre su credencial
+                    'name' => $name,
+                    'app_metadata' => ['customer_id' => $customerId],
+                    'password' => bin2hex(random_bytes(16)) . 'Aa1!', // replaced once the customer registers their credential
                 ],
             ]);
         } catch (Throwable $e) {
-            throw new RuntimeException("No se pudo crear el usuario en Auth0: {$e->getMessage()}", previous: $e);
+            throw new RuntimeException("Could not create the user in Auth0: {$e->getMessage()}", previous: $e);
         }
 
         $body = json_decode((string) $response->getBody(), true);
 
-        return ['usuario_id' => $body['user_id']];
+        return ['user_id' => $body['user_id']];
     }
 }

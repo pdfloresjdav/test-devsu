@@ -10,25 +10,25 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * Criterio de aceptacion de la Fase 6: un evento de prueba dispara un log
- * de notificacion con el canal y contenido correctos. Se ejerce la cadena
- * completa real: EventBridge -> regla -> SQS -> "notifications:consume"
- * -> LogNotificationChannel (+ DeliveryTracker en DynamoDB), todo contra
- * el LocalStack real de docker-compose.
+ * Acceptance criterion for Fase 6: a test event triggers a notification log
+ * with the correct channel and content. Exercises the full real chain:
+ * EventBridge -> rule -> SQS -> "notifications:consume" ->
+ * LogNotificationChannel (+ DeliveryTracker in DynamoDB), all against the
+ * real LocalStack from docker-compose.
  */
 class ConsumeNotificationEventsCommandTest extends TestCase
 {
-    public function test_un_evento_publicado_dispara_un_log_de_notificacion_y_queda_registrado(): void
+    public function test_a_published_event_triggers_a_notification_log_and_is_recorded(): void
     {
         Log::spy();
 
         $actor = 'actor-e2e-' . Str::uuid();
 
         $this->app->make(EventPublisherInterface::class)->publish('TransferCompleted', [
-            'transferencia_id' => (string) Str::uuid(),
-            'cuenta_origen' => 'CUENTA-A',
-            'cuenta_destino' => 'CUENTA-B',
-            'monto' => 250,
+            'transfer_id' => (string) Str::uuid(),
+            'source_account' => 'ACCOUNT-A',
+            'destination_account' => 'ACCOUNT-B',
+            'amount' => 250,
             'actor' => $actor,
         ]);
 
@@ -36,21 +36,21 @@ class ConsumeNotificationEventsCommandTest extends TestCase
 
         $this->artisan('notifications:consume', ['--once' => true])->assertExitCode(0);
 
-        // TransferCompleted va por push Y email (channel_map) -> 2 logs.
-        Log::shouldHaveReceived('info')->twice()->withArgs(function (string $mensaje, array $contexto) use ($actor) {
-            return $contexto['destinatario'] === $actor
-                && str_contains($contexto['body'], 'CUENTA-A');
+        // TransferCompleted goes through push AND email (channel_map) -> 2 logs.
+        Log::shouldHaveReceived('info')->twice()->withArgs(function (string $message, array $context) use ($actor) {
+            return $context['recipient'] === $actor
+                && str_contains($context['body'], 'ACCOUNT-A');
         });
 
         $dynamo = $this->app->make(DynamoDbClient::class);
         $marshaler = $this->app->make(Marshaler::class);
 
-        $resultado = $dynamo->query([
-            'TableName' => config('services.notificaciones.table'),
+        $result = $dynamo->query([
+            'TableName' => config('services.notifications.table'),
             'KeyConditionExpression' => 'actor = :actor',
             'ExpressionAttributeValues' => $marshaler->marshalItem([':actor' => $actor]),
         ]);
 
-        $this->assertCount(2, $resultado['Items'], 'Debio quedar un registro de entrega por cada canal (push y email)');
+        $this->assertCount(2, $result['Items'], 'There should be one delivery record per channel (push and email)');
     }
 }

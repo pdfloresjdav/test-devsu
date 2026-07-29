@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Contracts\SaldoInsuficienteException;
+use App\Contracts\InsufficientBalanceException;
 use App\Services\TransferOrchestrator;
 use BP\Common\Auth\JwtClaims;
 use BP\Common\Http\ApiResponse;
@@ -18,35 +18,35 @@ class TransferController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'cuenta_origen' => ['required', 'string'],
-            'cuenta_destino' => ['required', 'string'],
-            'monto' => ['required', 'numeric', 'gt:0'],
-            'descripcion' => ['nullable', 'string', 'max:255'],
+            'source_account' => ['required', 'string'],
+            'destination_account' => ['required', 'string'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'description' => ['nullable', 'string', 'max:255'],
         ]);
 
         $idempotencyKey = $request->attributes->get('idempotency_key');
 
         try {
-            $transferencia = $this->orchestrator->ejecutar(
-                $validated['cuenta_origen'],
-                $validated['cuenta_destino'],
-                (float) $validated['monto'],
-                $validated['descripcion'] ?? '',
+            $transfer = $this->orchestrator->execute(
+                $validated['source_account'],
+                $validated['destination_account'],
+                (float) $validated['amount'],
+                $validated['description'] ?? '',
                 $idempotencyKey,
                 JwtClaims::actor($request),
             );
-        } catch (SaldoInsuficienteException $e) {
-            return ApiResponse::error($e->getMessage(), 'saldo_insuficiente', status: 422);
+        } catch (InsufficientBalanceException $e) {
+            return ApiResponse::error($e->getMessage(), 'insufficient_balance', status: 422);
         }
 
         return ApiResponse::success([
-            'transferencia_id' => $transferencia->transferencia_id,
-            'cuenta_origen' => $transferencia->cuenta_origen,
-            'cuenta_destino' => $transferencia->cuenta_destino,
-            'monto' => (float) $transferencia->monto,
-            'descripcion' => $transferencia->descripcion,
-            'estado' => $transferencia->estado,
-            'motivo_falla' => $transferencia->motivo_falla,
+            'transfer_id' => $transfer->transfer_id,
+            'source_account' => $transfer->source_account,
+            'destination_account' => $transfer->destination_account,
+            'amount' => (float) $transfer->amount,
+            'description' => $transfer->description,
+            'status' => $transfer->status,
+            'failure_reason' => $transfer->failure_reason,
         ], status: 201);
     }
 }

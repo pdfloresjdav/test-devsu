@@ -7,10 +7,10 @@ use Psr\Http\Message\ResponseInterface;
 use Throwable;
 
 /**
- * Resuelve el JWKS de un emisor OIDC siguiendo el estandar de discovery
- * (RFC 8414 / OpenID Connect Discovery). Funciona igual para el mock-oidc
- * local que para un tenant real de Auth0/Okta -- ambos exponen
- * /.well-known/openid-configuration con un campo jwks_uri.
+ * Resolves the JWKS of an OIDC issuer following the discovery standard
+ * (RFC 8414 / OpenID Connect Discovery). Works the same way for the local
+ * mock-oidc as for a real Auth0/Okta tenant -- both expose
+ * /.well-known/openid-configuration with a jwks_uri field.
  */
 class DiscoveryJwksProvider implements JwksProviderInterface
 {
@@ -34,7 +34,7 @@ class DiscoveryJwksProvider implements JwksProviderInterface
         $jwks = $this->fetchJson($jwksUri);
 
         if (! isset($jwks['keys']) || ! is_array($jwks['keys'])) {
-            throw new JwtValidationException("El JWKS de [{$issuer}] no tiene un campo 'keys' valido.");
+            throw new JwtValidationException("The JWKS from [{$issuer}] doesn't have a valid 'keys' field.");
         }
 
         $this->cache->put($cacheKey, $jwks, $this->cacheTtlSeconds);
@@ -48,7 +48,7 @@ class DiscoveryJwksProvider implements JwksProviderInterface
         $discovery = $this->fetchJson($discoveryUrl);
 
         if (! isset($discovery['jwks_uri']) || ! is_string($discovery['jwks_uri'])) {
-            throw new JwtValidationException("El documento de discovery de [{$issuer}] no tiene 'jwks_uri'.");
+            throw new JwtValidationException("The discovery document from [{$issuer}] doesn't have a 'jwks_uri'.");
         }
 
         return $discovery['jwks_uri'];
@@ -63,14 +63,14 @@ class DiscoveryJwksProvider implements JwksProviderInterface
             /** @var ResponseInterface $response */
             $response = $this->httpClient->request('GET', $url);
         } catch (Throwable $e) {
-            throw new JwtValidationException("No se pudo contactar [{$url}]: {$e->getMessage()}", previous: $e);
+            throw new JwtValidationException("Could not reach [{$url}]: {$e->getMessage()}", previous: $e);
         }
 
         $body = (string) $response->getBody();
         $decoded = json_decode($body, true);
 
         if (! is_array($decoded)) {
-            throw new JwtValidationException("Respuesta invalida (no JSON) desde [{$url}].");
+            throw new JwtValidationException("Invalid response (not JSON) from [{$url}].");
         }
 
         return $decoded;

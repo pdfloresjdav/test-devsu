@@ -6,17 +6,17 @@ use App\Contracts\IdentityProviderClient;
 use Illuminate\Support\Str;
 
 /**
- * Simula la creacion de un usuario en el proveedor de identidad. El
- * mock-oidc local (oidc-server-mock) no tiene una Management API real --
- * es un doble de pruebas con usuarios fijos por configuracion, no un IdP
- * completo -- asi que esta es la unica opcion viable para desarrollo
- * local, no solo una opcion "mas simple". Auth0IdentityProviderClient es
- * la implementacion real para cuando el tenant de Auth0 este arriba.
+ * Simulates creating a user in the identity provider. The local mock-oidc
+ * (oidc-server-mock) has no real Management API -- it's a test double with
+ * fixed users by configuration, not a full IdP -- so this is the only
+ * viable option for local development, not just a "simpler" one.
+ * Auth0IdentityProviderClient is the real implementation for once the
+ * Auth0 tenant is up.
  */
 class FakeIdentityProviderClient implements IdentityProviderClient
 {
-    public function crearUsuario(string $clienteId, string $nombre, string $email): array
+    public function createUser(string $customerId, string $name, string $email): array
     {
-        return ['usuario_id' => 'auth0|fake-' . Str::uuid()];
+        return ['user_id' => 'auth0|fake-' . Str::uuid()];
     }
 }

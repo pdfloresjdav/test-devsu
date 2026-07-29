@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 class IdempotencyMiddlewareTest extends TestCase
 {
-    public function test_cachea_una_respuesta_json_exitosa(): void
+    public function test_caches_a_successful_json_response(): void
     {
         $middleware = new IdempotencyMiddleware(Cache::store(), ttlSeconds: 60);
         $key = (string) Str::uuid();
@@ -25,15 +25,15 @@ class IdempotencyMiddlewareTest extends TestCase
         $this->assertNotNull(Cache::store()->get("idempotency:transfers:{$key}"));
     }
 
-    public function test_no_revienta_ni_cachea_si_la_respuesta_no_es_json(): void
+    public function test_does_not_break_or_cache_if_the_response_is_not_json(): void
     {
-        // Reproduce el caso real de la Fase 11: un error no controlado mas
-        // abajo en la pila (ej. una excepcion de PHP sin capturar) puede
-        // producir una respuesta generica de Laravel que no es JsonResponse
-        // -- antes, esto reventaba con un BadMethodCallException al llamar
-        // getData() sobre ella, ocultando el error real detras de uno mas
-        // confuso. Ahora simplemente no se cachea y la respuesta original
-        // (con el error real) llega tal cual al cliente.
+        // Reproduces the real Phase 11 case: an uncontrolled error further
+        // down the stack (e.g. an uncaught PHP exception) can produce a
+        // generic Laravel response that isn't a JsonResponse -- before,
+        // this broke with a BadMethodCallException when calling getData()
+        // on it, hiding the real error behind a more confusing one. Now it
+        // simply doesn't get cached and the original response (with the
+        // real error) reaches the client as-is.
         $middleware = new IdempotencyMiddleware(Cache::store(), ttlSeconds: 60);
         $key = (string) Str::uuid();
         $request = Request::create('/transfers', 'POST');

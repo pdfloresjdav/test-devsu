@@ -10,43 +10,43 @@ use Aws\Sqs\SqsClient;
 use Illuminate\Console\Command;
 
 /**
- * Provision idempotente: DLQ + cola SQS propia de Notificaciones (con
- * redrive policy), regla de EventBridge que rutea el bus completo hacia
- * esa cola, y la tabla DynamoDB de estado de entrega.
+ * Idempotent provisioning: Notifications' own DLQ + SQS queue (with a
+ * redrive policy), an EventBridge rule that routes the whole bus to that
+ * queue, and the delivery-status DynamoDB table.
  */
 class SetupNotificationInfrastructure extends Command
 {
     protected $signature = 'notifications:setup-infrastructure';
 
-    protected $description = 'Crea la cola SQS + DLQ, la regla de EventBridge y la tabla DynamoDB de notificaciones (idempotente)';
+    protected $description = 'Creates the SQS queue + DLQ, the EventBridge rule and the notifications DynamoDB table (idempotent)';
 
     public function handle(SqsClient $sqs, EventBridgeClient $eventBridge, DynamoDbClient $dynamo): int
     {
-        $queueUrl = $this->crearColasSqs($sqs);
-        $this->crearReglaEventBridge($eventBridge, $sqs, $queueUrl);
-        $this->crearTablaDynamo($dynamo);
+        $queueUrl = $this->createSqsQueues($sqs);
+        $this->createEventBridgeRule($eventBridge, $sqs, $queueUrl);
+        $this->createDynamoTable($dynamo);
 
-        $this->info("Listo. QUEUE_URL para .env: {$queueUrl}");
+        $this->info("Done. QUEUE_URL for .env: {$queueUrl}");
 
         return self::SUCCESS;
     }
 
-    private function crearColasSqs(SqsClient $sqs): string
+    private function createSqsQueues(SqsClient $sqs): string
     {
-        $dlqName = config('services.notificaciones.dlq_name');
-        $queueName = config('services.notificaciones.queue_name');
+        $dlqName = config('services.notifications.dlq_name');
+        $queueName = config('services.notifications.queue_name');
 
-        $dlqUrl = $this->crearColaSiNoExiste($sqs, $dlqName);
+        $dlqUrl = $this->createQueueIfNotExists($sqs, $dlqName);
         $dlqArn = $sqs->getQueueAttributes(['QueueUrl' => $dlqUrl, 'AttributeNames' => ['QueueArn']])['Attributes']['QueueArn'];
 
-        $queueUrl = $this->crearColaSiNoExiste($sqs, $queueName, [
+        $queueUrl = $this->createQueueIfNotExists($sqs, $queueName, [
             'RedrivePolicy' => json_encode([
                 'deadLetterTargetArn' => $dlqArn,
                 'maxReceiveCount' => '3',
             ]),
         ]);
 
-        $this->info("Colas SQS listas: {$queueName} (DLQ: {$dlqName})");
+        $this->info("SQS queues ready: {$queueName} (DLQ: {$dlqName})");
 
         return $queueUrl;
     }
@@ -54,7 +54,7 @@ class SetupNotificationInfrastructure extends Command
     /**
      * @param array<string, string> $attributes
      */
-    private function crearColaSiNoExiste(SqsClient $sqs, string $name, array $attributes = []): string
+    private function createQueueIfNotExists(SqsClient $sqs, string $name, array $attributes = []): string
     {
         try {
             return $sqs->getQueueUrl(['QueueName' => $name])['QueueUrl'];
@@ -67,10 +67,10 @@ class SetupNotificationInfrastructure extends Command
         return $sqs->createQueue(['QueueName' => $name, 'Attributes' => $attributes])['QueueUrl'];
     }
 
-    private function crearReglaEventBridge(EventBridgeClient $eventBridge, SqsClient $sqs, string $queueUrl): void
+    private function createEventBridgeRule(EventBridgeClient $eventBridge, SqsClient $sqs, string $queueUrl): void
     {
         $busName = config('bp-common.events.event_bus_name');
-        $ruleName = config('services.notificaciones.rule_name');
+        $ruleName = config('services.notifications.rule_name');
         $queueArn = $sqs->getQueueAttributes(['QueueUrl' => $queueUrl, 'AttributeNames' => ['QueueArn']])['Attributes']['QueueArn'];
 
         $eventBridge->putRule([
@@ -101,16 +101,16 @@ class SetupNotificationInfrastructure extends Command
             ],
         ]);
 
-        $this->info("Regla de EventBridge [{$ruleName}] enrutando el bus [{$busName}] hacia la cola de notificaciones.");
+        $this->info("EventBridge rule [{$ruleName}] routing bus [{$busName}] to the notifications queue.");
     }
 
-    private function crearTablaDynamo(DynamoDbClient $dynamo): void
+    private function createDynamoTable(DynamoDbClient $dynamo): void
     {
-        $table = config('services.notificaciones.table');
+        $table = config('services.notifications.table');
 
         try {
             $dynamo->describeTable(['TableName' => $table]);
-            $this->info("La tabla [{$table}] ya existia.");
+            $this->info("Table [{$table}] already existed.");
 
             return;
         } catch (DynamoDbException $e) {
@@ -133,6 +133,6 @@ class SetupNotificationInfrastructure extends Command
         ]);
 
         $dynamo->waitUntil('TableExists', ['TableName' => $table]);
-        $this->info("Tabla [{$table}] creada.");
+        $this->info("Table [{$table}] created.");
     }
 }

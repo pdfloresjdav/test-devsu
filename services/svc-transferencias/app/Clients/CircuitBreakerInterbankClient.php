@@ -9,13 +9,13 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Throwable;
 
 /**
- * Decorador Circuit Breaker + Retry sobre el cliente interbancario
- * (decision 3.11/9.2): reintenta con backoff exponencial + jitter ante
- * fallas transitorias, y abre el circuito tras varias fallas consecutivas
- * para no seguir golpeando una red interbancaria degradada.
+ * Circuit Breaker + Retry decorator over the interbank client (decision
+ * 3.11/9.2): retries with exponential backoff + jitter on transient
+ * failures, and opens the circuit after several consecutive failures to
+ * stop hammering a degraded interbank network.
  *
- * El estado del circuito vive en Redis (no en memoria de proceso) para que
- * sea consistente entre workers de Octane e instancias del servicio.
+ * The circuit state lives in Redis (not process memory) so it's
+ * consistent across Octane workers and service instances.
  */
 class CircuitBreakerInterbankClient implements InterbankClient
 {
@@ -31,17 +31,17 @@ class CircuitBreakerInterbankClient implements InterbankClient
     ) {
     }
 
-    public function ejecutar(string $cuentaDestino, float $monto): array
+    public function execute(string $destinationAccount, float $amount): array
     {
         if ($this->isOpen()) {
-            throw new CircuitOpenException('El circuito hacia la red interbancaria esta abierto; se rechaza sin intentar.');
+            throw new CircuitOpenException('The circuit toward the interbank network is open; rejecting without attempting.');
         }
 
         try {
-            $resultado = $this->withRetry(fn () => $this->inner->ejecutar($cuentaDestino, $monto));
+            $result = $this->withRetry(fn () => $this->inner->execute($destinationAccount, $amount));
             $this->recordSuccess();
 
-            return $resultado;
+            return $result;
         } catch (InterbankException $e) {
             $this->recordFailure();
             throw $e;

@@ -6,26 +6,25 @@ import { useAuth } from './src/auth/useAuth';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { CredentialSetupScreen } from './src/screens/CredentialSetupScreen';
-import { MovimientosScreen } from './src/screens/MovimientosScreen';
-import { TransferenciaScreen } from './src/screens/TransferenciaScreen';
-import { ConfirmacionScreen } from './src/screens/ConfirmacionScreen';
-import type { Transferencia } from './src/api/types';
+import { MovementsScreen } from './src/screens/MovementsScreen';
+import { TransferScreen } from './src/screens/TransferScreen';
+import { ConfirmationScreen } from './src/screens/ConfirmationScreen';
+import type { Transfer } from './src/api/types';
 
 type Screen =
   | { name: 'login' }
   | { name: 'onboarding' }
-  | { name: 'credencial'; usuarioId: string }
-  | { name: 'movimientos' }
-  | { name: 'transferencia' }
-  | { name: 'confirmacion'; resultado: Transferencia };
+  | { name: 'credential'; userId: string }
+  | { name: 'movements' }
+  | { name: 'transfer' }
+  | { name: 'confirmation'; result: Transfer };
 
 /**
- * Enrutamiento simple basado en estado de React en vez de
- * @react-navigation: en este entorno no hay Xcode Simulator ni emulador de
- * Android para verificar módulos nativos adicionales (react-native-screens,
- * gesture-handler), así que se minimiza la superficie de dependencias
- * nativas no verificables. Documentado como simplificación en WORKLOG.md,
- * no como decisión definitiva de arquitectura.
+ * Simple state-based routing instead of @react-navigation: this
+ * environment has no Xcode Simulator or Android emulator to verify
+ * additional native modules (react-native-screens, gesture-handler), so
+ * the surface of unverifiable native dependencies is minimized. Documented
+ * as a simplification in WORKLOG.md, not as a final architecture decision.
  */
 function Router() {
   const { isLoading } = useAuth();
@@ -39,38 +38,32 @@ function Router() {
     case 'login':
       return (
         <LoginScreen
-          onIngresar={() => setScreen({ name: 'movimientos' })}
-          onEmpezarOnboarding={() => setScreen({ name: 'onboarding' })}
+          onLogin={() => setScreen({ name: 'movements' })}
+          onStartOnboarding={() => setScreen({ name: 'onboarding' })}
         />
       );
     case 'onboarding':
       return (
-        <OnboardingScreen
-          onAprobado={(usuarioId) => setScreen({ name: 'credencial', usuarioId })}
-        />
+        <OnboardingScreen onApproved={(userId) => setScreen({ name: 'credential', userId })} />
       );
-    case 'credencial':
+    case 'credential':
       return (
         <CredentialSetupScreen
-          usuarioId={screen.usuarioId}
-          onListo={() => setScreen({ name: 'movimientos' })}
+          userId={screen.userId}
+          onReady={() => setScreen({ name: 'movements' })}
         />
       );
-    case 'movimientos':
+    case 'movements':
+      return <MovementsScreen onNewTransfer={() => setScreen({ name: 'transfer' })} />;
+    case 'transfer':
       return (
-        <MovimientosScreen onNuevaTransferencia={() => setScreen({ name: 'transferencia' })} />
+        <TransferScreen onCompleted={(result) => setScreen({ name: 'confirmation', result })} />
       );
-    case 'transferencia':
+    case 'confirmation':
       return (
-        <TransferenciaScreen
-          onCompletada={(resultado) => setScreen({ name: 'confirmacion', resultado })}
-        />
-      );
-    case 'confirmacion':
-      return (
-        <ConfirmacionScreen
-          resultado={screen.resultado}
-          onVolver={() => setScreen({ name: 'movimientos' })}
+        <ConfirmationScreen
+          result={screen.result}
+          onGoBack={() => setScreen({ name: 'movements' })}
         />
       );
   }

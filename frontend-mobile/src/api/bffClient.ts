@@ -18,10 +18,10 @@ interface BffRequestOptions extends RequestInit {
 const BFF_MOBILE_URL = process.env.EXPO_PUBLIC_BFF_MOBILE_URL ?? 'http://localhost:8004';
 
 /**
- * Cliente hacia el BFF Móvil. Mismo envelope {data}/{error:{code,message}}
- * que expone BP\Common\Http\ApiResponse (igual convención que bffFetch en
- * frontend-web) — `accessToken` es opcional porque el onboarding no
- * requiere JWT (el cliente todavía no existe en el IdP).
+ * Client toward the BFF Mobile. Same {data}/{error:{code,message}} envelope
+ * exposed by BP\Common\Http\ApiResponse (same convention as bffFetch in
+ * frontend-web) — `accessToken` is optional because onboarding doesn't
+ * require a JWT (the customer doesn't exist in the IdP yet).
  */
 export async function bffFetch<T>(path: string, options: BffRequestOptions = {}): Promise<T> {
   const { accessToken, idempotencyKey, headers, ...rest } = options;

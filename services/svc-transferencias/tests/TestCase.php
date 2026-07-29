@@ -2,7 +2,7 @@
 
 namespace Tests;
 
-use App\Models\Cuenta;
+use App\Models\Account;
 use BP\Common\Auth\JwksProviderInterface;
 use BP\Common\Testing\FakeJwksProvider;
 use BP\Common\Testing\RsaKeyPair;
@@ -36,11 +36,11 @@ abstract class TestCase extends BaseTestCase
         ], $claimsOverride));
     }
 
-    protected function crearCuenta(float $saldo = 1000.0): Cuenta
+    protected function createAccount(float $balance = 1000.0): Account
     {
-        return Cuenta::create([
-            'cuenta_id' => (string) Str::uuid(),
-            'saldo' => $saldo,
+        return Account::create([
+            'account_id' => (string) Str::uuid(),
+            'balance' => $balance,
         ]);
     }
 }

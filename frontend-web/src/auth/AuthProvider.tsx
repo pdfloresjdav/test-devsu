@@ -14,9 +14,9 @@ export interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /**
- * Maneja la sesion (item 9.5): carga el usuario persistido al montar,
- * escucha la renovacion silenciosa del token (refresh_token, ya que el
- * scope incluye offline_access) y el vencimiento de la sesion.
+ * Manages the session (item 9.5): loads the persisted user on mount,
+ * listens for silent token renewal (refresh_token, since the scope
+ * includes offline_access) and session expiration.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

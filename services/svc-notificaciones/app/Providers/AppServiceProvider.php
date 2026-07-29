@@ -16,7 +16,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(PinpointClient::class, fn () => new PinpointClient([
             'version' => 'latest',
-            'region' => config('services.notificaciones.aws_region'),
+            'region' => config('services.notifications.aws_region'),
             'credentials' => env('AWS_ACCESS_KEY_ID') ? [
                 'key' => env('AWS_ACCESS_KEY_ID'),
                 'secret' => env('AWS_SECRET_ACCESS_KEY'),
@@ -25,8 +25,8 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(SesClient::class, fn () => new SesClient([
             'version' => 'latest',
-            'region' => config('services.notificaciones.aws_region'),
-            'endpoint' => config('services.notificaciones.ses_endpoint') ?: null,
+            'region' => config('services.notifications.aws_region'),
+            'endpoint' => config('services.notifications.ses_endpoint') ?: null,
             'credentials' => env('AWS_ACCESS_KEY_ID') ? [
                 'key' => env('AWS_ACCESS_KEY_ID'),
                 'secret' => env('AWS_SECRET_ACCESS_KEY'),
@@ -36,7 +36,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(DeliveryTracker::class, fn ($app) => new DynamoDbDeliveryTracker(
             $app->make(DynamoDbClient::class),
             $app->make(Marshaler::class),
-            config('services.notificaciones.table'),
+            config('services.notifications.table'),
         ));
     }
 

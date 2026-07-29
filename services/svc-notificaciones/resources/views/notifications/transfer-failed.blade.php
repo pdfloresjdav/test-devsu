@@ -1,1 +1,1 @@
-Tu transferencia de {{ number_format((float) ($detalle['monto'] ?? 0), 2) }} desde la cuenta {{ $detalle['cuenta_origen'] ?? '' }} hacia {{ $detalle['cuenta_destino'] ?? '' }} no se pudo completar. El monto ya fue devuelto a tu cuenta de origen.
+Your transfer of {{ number_format((float) ($detail['amount'] ?? 0), 2) }} from account {{ $detail['source_account'] ?? '' }} to {{ $detail['destination_account'] ?? '' }} could not be completed. The amount was returned to your source account.

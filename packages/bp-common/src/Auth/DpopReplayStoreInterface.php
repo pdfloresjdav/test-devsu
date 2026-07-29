@@ -5,8 +5,8 @@ namespace BP\Common\Auth;
 interface DpopReplayStoreInterface
 {
     /**
-     * Registra el jti si no se ha visto antes. Devuelve false si ya existia
-     * (indicio de replay del mismo DPoP proof).
+     * Registers the jti if it hasn't been seen before. Returns false if it
+     * already existed (a sign of replay of the same DPoP proof).
      */
     public function registerOnce(string $jti, int $ttlSeconds): bool;
 }

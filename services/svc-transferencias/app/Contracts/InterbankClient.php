@@ -5,11 +5,11 @@ namespace App\Contracts;
 interface InterbankClient
 {
     /**
-     * Ejecuta la transferencia en la red interbancaria / banco destino.
+     * Executes the transfer on the interbank network / destination bank.
      *
-     * @return array{confirmacion_id: string}
+     * @return array{confirmation_id: string}
      *
-     * @throws InterbankException si el banco destino rechaza o no responde.
+     * @throws InterbankException if the destination bank rejects it or doesn't respond.
      */
-    public function ejecutar(string $cuentaDestino, float $monto): array;
+    public function execute(string $destinationAccount, float $amount): array;
 }

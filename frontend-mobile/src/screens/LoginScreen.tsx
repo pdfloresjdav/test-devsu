@@ -3,56 +3,56 @@ import { ActivityIndicator, Button, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../auth/useAuth';
 
 interface Props {
-  onIngresar: () => void;
-  onEmpezarOnboarding: () => void;
+  onLogin: () => void;
+  onStartOnboarding: () => void;
 }
 
 /**
- * Item 10.4: login recurrente. Si ya hay una credencial vinculada en el
- * dispositivo (item 10.3), pide biometría (cuando está disponible) y
- * renueva el access_token con el refresh_token guardado — sin volver a
- * pasar por Authorization Code + PKCE ni por el proveedor KYC.
+ * Item 10.4: recurring login. If there's already a credential linked on
+ * the device (item 10.3), it asks for biometrics (when available) and
+ * renews the access_token with the stored refresh_token — without going
+ * through Authorization Code + PKCE or the KYC provider again.
  */
-export function LoginScreen({ onIngresar, onEmpezarOnboarding }: Props) {
-  const { hasLinkedCredential, loginRecurrente, biometricAvailable } = useAuth();
-  const [cargando, setCargando] = useState(false);
+export function LoginScreen({ onLogin, onStartOnboarding }: Props) {
+  const { hasLinkedCredential, recurringLogin, biometricAvailable } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const ingresar = async () => {
-    setCargando(true);
+  const login = async () => {
+    setLoading(true);
     setError(null);
 
-    const resultado = await loginRecurrente();
+    const result = await recurringLogin();
 
-    setCargando(false);
+    setLoading(false);
 
-    if (resultado.ok) {
-      onIngresar();
+    if (result.ok) {
+      onLogin();
     } else {
-      setError(resultado.error ?? 'No se pudo iniciar sesión.');
+      setError(result.error ?? 'Could not log in.');
     }
   };
 
   if (!hasLinkedCredential) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Banca Digital BP</Text>
-        <Text>Todavía no tenés una credencial vinculada en este dispositivo.</Text>
-        <Button title="Empezar alta de cliente" onPress={onEmpezarOnboarding} />
+        <Text style={styles.title}>BP Digital Banking</Text>
+        <Text>You do not have a credential linked on this device yet.</Text>
+        <Button title="Start customer sign-up" onPress={onStartOnboarding} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Banca Digital BP</Text>
+      <Text style={styles.title}>BP Digital Banking</Text>
       <Text>
         {biometricAvailable
-          ? 'Confirmá tu identidad con biometría para continuar.'
-          : 'Este dispositivo no tiene biometría disponible; se va a renovar la sesión guardada directamente.'}
+          ? 'Confirm your identity with biometrics to continue.'
+          : 'This device has no biometrics available; the stored session will be renewed directly.'}
       </Text>
-      <Button title="Ingresar" onPress={ingresar} disabled={cargando} />
-      {cargando && <ActivityIndicator testID="login-loading" />}
+      <Button title="Log in" onPress={login} disabled={loading} />
+      {loading && <ActivityIndicator testID="login-loading" />}
       {error && (
         <Text style={styles.error} role="alert">
           {error}
