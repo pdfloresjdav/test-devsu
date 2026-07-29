@@ -15,7 +15,10 @@ import type { Transferencia } from '../api/types';
  * autenticacion reforzada para montos grandes), se redirige a
  * reautenticarse en vez de solo mostrar un error -- conservando la MISMA
  * Idempotency-Key para que, tras reautenticarse, el reintento no duplique
- * la operacion.
+ * la operacion. Se detecta por `error.code === 'step_up_required'` (no por
+ * texto del mensaje): bp-common ahora preserva el codigo de negocio del
+ * servicio interno en vez de aplanarlo siempre a "upstream_error" (bug
+ * encontrado y corregido en la Fase 10, ver WORKLOG.md).
  */
 export function TransferenciaPage() {
   const { accessToken, login } = useAuth();
@@ -51,7 +54,7 @@ export function TransferenciaPage() {
       resetIdempotencyKey();
       navigate('/transferencias/confirmacion', { state: { resultado } });
     } catch (err) {
-      if (err instanceof BffError && err.code === 'upstream_error' && isStepUpError(err)) {
+      if (err instanceof BffError && err.code === 'step_up_required') {
         setError(
           'Esta transferencia requiere autenticación reforzada. Volvé a iniciar sesión para continuar.',
         );
@@ -110,12 +113,5 @@ export function TransferenciaPage() {
 
       {error && <p role="alert">{error}</p>}
     </main>
-  );
-}
-
-function isStepUpError(error: BffError): boolean {
-  return (
-    error.message.toLowerCase().includes('autenticacion reforzada') ||
-    error.message.toLowerCase().includes('autenticación reforzada')
   );
 }

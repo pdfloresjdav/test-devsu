@@ -283,6 +283,31 @@ Pantallas: `/login`, `/callback` (retorno del flujo PKCE), `/` (movimientos, pro
 
 > Nota de verificación: en este entorno no hay herramienta de automatización de navegador disponible, así que la fase se verificó con la suite de tests automatizados más una comprobación real de que `npm run dev` sirve el shell de la SPA y sus rutas cliente (`curl` a `/`, `/login`, `/transferencias`) — no con un recorrido manual de clics en navegador.
 
+#### `frontend-mobile` (Fase 10)
+
+App React Native + TypeScript (Expo). Onboarding con captura de documento/selfie simulada, registro de credencial atado a biometría nativa del dispositivo, login recurrente por biometría sin repetir el KYC, e historial de movimientos/transferencias contra `bff-mobile`.
+
+```bash
+cd frontend-mobile
+cp .env.example .env   # ya apunta al mock-oidc (puerto 4011, client_id "bp-web") y a bff-mobile (8004)
+npm install
+npm start               # abre el menú de Expo (i = iOS, a = Android, w = web)
+```
+
+Requiere `bff-mobile` corriendo (ver su propia sección) y el `mock-oidc` de `docker-compose` (`make up`) para poder iniciar sesión.
+
+Variables de `.env.example` (con prefijo `EXPO_PUBLIC_`, que Expo inlinea en build automáticamente — equivalente al `VITE_` de frontend-web): `EXPO_PUBLIC_OIDC_ISSUER`, `EXPO_PUBLIC_OIDC_CLIENT_ID`, `EXPO_PUBLIC_BFF_MOBILE_URL`, `EXPO_PUBLIC_DEMO_CUENTA_ID`.
+
+Scripts disponibles:
+- `npm start` / `npm run ios` / `npm run android` / `npm run web`
+- `npm run lint` — `eslint-config-expo` (el scaffold de Expo trae este preset de ESLint en vez de configurarlo a mano)
+- `npm run format` / `npm run format:check` — Prettier
+- `npm run test` — Jest (`jest-expo`) + React Native Testing Library (11 tests: Idempotency-Key, onboarding con aprobación/rechazo KYC, movimientos, transferencia incluyendo el reintento con la misma Idempotency-Key y el disparo de reautenticación ante rechazo por step-up)
+
+Pantallas (enrutadas con un router simple basado en estado de React, no `@react-navigation` — ver WORKLOG.md): login/onboarding inicial, registro de credencial, movimientos, transferencia y confirmación.
+
+> **Limitación importante de este entorno:** no hay Xcode Simulator, Android SDK/emulador, `adb` ni `watchman` instalados acá, así que el criterio de aceptación de esta fase ("funcionando en el emulador") no se pudo verificar de esa forma. Se verificó con lint/type-check/tests automatizados reales, más un smoke test real sirviendo la app con `npm run web` (Expo con react-native-web, en el puerto 19006 ya reservado para esta app en `mock-oidc`) y una comprobación manual del flujo OAuth contra el emisor real (ver WORKLOG.md). **Face ID/BiometricPrompt real y `expo-secure-store` nativo quedan pendientes de probarse en un dispositivo o development build real** — no funcionan en la vista web de desarrollo (documentado en `src/auth/biometric.ts` y `src/storage/secureStorage.ts`).
+
 ## Stack propuesto
 
 - **Frontend:** React + TypeScript (SPA) y React Native + TypeScript (app móvil).

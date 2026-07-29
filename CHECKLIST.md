@@ -173,13 +173,16 @@
 
 **Criterio de aceptación:** flujo de onboarding completo (captura simulada + llamada a BFF Móvil) y login biométrico simulado funcionando en el emulador.
 
-- [ ] 10.1 Scaffold (React Native + TypeScript) + ESLint/Prettier
-- [ ] 10.2 Pantalla de onboarding (captura de documento/selfie simulada) → llamada a `bff-mobile`
-- [ ] 10.3 Registro de credencial: usuario/clave y/o WebAuthn/FIDO2 (passkey) atado a biometría nativa del dispositivo (Face ID / BiometricPrompt, vía stub en el emulador)
-- [ ] 10.4 Login recurrente (Authorization Code + PKCE + biometría nativa simulada, sin volver a pasar por el proveedor KYC)
-- [ ] 10.5 Pantallas de movimientos y transferencia (reutilizando contratos del BFF Móvil)
-- [ ] 10.6 Tests
-- [ ] 10.7 `.env.example`
+**[!] Limitación de este entorno, acordada con el usuario antes de empezar la fase:** no hay Xcode Simulator, Android SDK/emulador, `adb` ni `watchman` instalados acá, así que el criterio de aceptación tal cual está escrito ("funcionando en el emulador") no se puede verificar en esta sesión. Se acordó con el usuario avanzar igual con Expo (React Native + TypeScript) y verificar con lint/type-check/tests automatizados más un smoke test real vía `expo start --web` (react-native-web) — ver WORKLOG.md para el detalle de qué se verificó y qué queda pendiente de un dispositivo/emulador real.
+
+- [x] 10.1 Scaffold (React Native + TypeScript, vía Expo) + ESLint/Prettier — `eslint-config-expo` (equivalente de ESLint para el scaffold de Expo, misma lógica de adaptación que `oxlint` en frontend-web) + Prettier.
+- [x] 10.2 Pantalla de onboarding (captura de documento/selfie simulada) → llamada a `bff-mobile`
+- [x] 10.3 Registro de credencial: usuario/clave y/o WebAuthn/FIDO2 (passkey) atado a biometría nativa del dispositivo (Face ID / BiometricPrompt, vía stub en el emulador) — simplificación documentada en WORKLOG.md (login PKCE + bind a biometría nativa vía `expo-local-authentication`, no un ceremonial WebAuthn/FIDO2 real contra un Relying Party que mock-oidc no soporta).
+- [x] 10.4 Login recurrente (Authorization Code + PKCE + biometría nativa simulada, sin volver a pasar por el proveedor KYC)
+- [x] 10.5 Pantallas de movimientos y transferencia (reutilizando contratos del BFF Móvil)
+- [x] 10.6 Tests
+- [x] 10.7 `.env.example`
+- [ ] 10.8 (agregado en la Fase 10, no bloqueante) Extraer `packages/bp-frontend-common` para dejar de duplicar `bffClient`/`types`/Idempotency-Key entre `frontend-web` y `frontend-mobile` — pendiente de un dispositivo/emulador real para verificar que un paquete TypeScript sin compilar se resuelve bien en Metro (React Native). Ver WORKLOG.md.
 
 ---
 

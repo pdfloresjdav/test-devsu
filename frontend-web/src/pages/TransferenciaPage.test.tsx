@@ -112,7 +112,7 @@ describe('TransferenciaPage', () => {
     const { BffError } =
       await vi.importActual<typeof import('../api/bffClient')>('../api/bffClient');
     vi.mocked(bffFetch).mockRejectedValueOnce(
-      new BffError(403, 'upstream_error', 'La operación requiere autenticación reforzada'),
+      new BffError(403, 'step_up_required', 'La operación requiere autenticación reforzada'),
     );
 
     render(

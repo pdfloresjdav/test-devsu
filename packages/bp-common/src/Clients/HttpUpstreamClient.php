@@ -31,10 +31,11 @@ abstract class HttpUpstreamClient
             $status = $e->getResponse()->getStatusCode();
             $body = json_decode((string) $e->getResponse()->getBody(), true);
             $mensaje = $body['error']['message'] ?? $e->getMessage();
+            $codigo = $body['error']['code'] ?? null;
 
-            throw new UpstreamServiceException($mensaje, $status, $e);
+            throw new UpstreamServiceException($mensaje, $status, $codigo, $e);
         } catch (GuzzleException|Throwable $e) {
-            throw new UpstreamServiceException("No se pudo contactar el servicio: {$e->getMessage()}", 502, $e);
+            throw new UpstreamServiceException("No se pudo contactar el servicio: {$e->getMessage()}", 502, previous: $e);
         }
     }
 

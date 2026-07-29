@@ -14,6 +14,6 @@ trait HandlesUpstreamErrors
 {
     protected function upstreamError(UpstreamServiceException $e): JsonResponse
     {
-        return ApiResponse::error($e->getMessage(), 'upstream_error', status: $e->statusCode);
+        return ApiResponse::error($e->getMessage(), $e->errorCode ?? 'upstream_error', status: $e->statusCode);
     }
 }
