@@ -25,6 +25,12 @@ packages/*/composer.lock
 !docs/*.pdf
 !diagrams/**/*.png
 !diagrams/**/*.svg
+# Assets estaticos reales de los frontends (favicon, iconos propios) — no son
+# exportaciones generadas, se necesitan en un clone limpio.
+!frontend-web/public/**/*.svg
+!frontend-web/src/**/*.svg
+!frontend-mobile/**/*.svg
+!frontend-mobile/**/*.png
 
 # Variables de entorno reales (nunca commitear, solo .env.example)
 .env

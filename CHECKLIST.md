@@ -159,13 +159,13 @@
 
 **Criterio de aceptación:** login funcional contra el mock-oidc local, y las 3 pantallas (movimientos, transferencia, confirmación) funcionan de punta a punta contra el BFF Web.
 
-- [ ] 9.1 Scaffold (Vite + React + TypeScript) + ESLint/Prettier
-- [ ] 9.2 Login con Authorization Code + PKCE contra `OAUTH_MODE` configurado por `.env`
-- [ ] 9.3 Pantalla de histórico de movimientos
-- [ ] 9.4 Pantalla/formulario de transferencia: genera un `Idempotency-Key` por intento y lo reenvía igual ante reintentos por timeout; maneja el estado de error/compensación y el rechazo por step-up (redirige a reautenticación)
-- [ ] 9.5 Manejo de sesión/refresh token
-- [ ] 9.6 Tests (al menos de los flujos críticos)
-- [ ] 9.7 `.env.example`
+- [x] 9.1 Scaffold (Vite + React + TypeScript) + ESLint/Prettier — el scaffold de Vite trae `oxlint` (linter moderno compatible, reemplaza a ESLint clásico) en vez de ESLint; se mantiene Prettier. Ver nota de adaptación en CLAUDE.md.
+- [x] 9.2 Login con Authorization Code + PKCE contra `OAUTH_MODE` configurado por `.env` — vía `oidc-client-ts` (genera PKCE automáticamente), configurable por `VITE_OIDC_ISSUER`/`VITE_OIDC_CLIENT_ID`.
+- [x] 9.3 Pantalla de histórico de movimientos — consume `GET /dashboard/{cuentaId}` del BFF Web.
+- [x] 9.4 Pantalla/formulario de transferencia: genera un `Idempotency-Key` por intento y lo reenvía igual ante reintentos por timeout; maneja el estado de error/compensación y el rechazo por step-up (redirige a reautenticación)
+- [x] 9.5 Manejo de sesión/refresh token — `AuthProvider` con `automaticSilentRenew` (scope `offline_access`).
+- [x] 9.6 Tests (al menos de los flujos críticos) — 8 tests Vitest+RTL: idempotency key (creación/reuso/reset), movimientos (éxito/error), transferencia (envío con Idempotency-Key, reuso de la clave en reintento, redirección a reautenticación por step-up).
+- [x] 9.7 `.env.example`
 
 ---
 

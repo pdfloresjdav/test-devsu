@@ -254,11 +254,34 @@ Correr sus tests: `php artisan test` (11 tests: onboarding aprobado/rechazado/va
 
 Construir su imagen: `docker build -f services/bff-mobile/Dockerfile -t bp/bff-mobile .` desde la raíz del repo.
 
-*(El resto de los servicios se agrega aquí a medida que se construyen — Fase 9 en adelante, ya del lado de los frontends.)*
+*(El resto de los servicios backend ya está completo — 5 microservicios de negocio/workers + 2 BFFs. A partir de aquí, las Fases 9 y 10 son del lado de los frontends.)*
 
 ### Frontends (`frontend-web/`, `frontend-mobile/`)
 
-*(Se agrega en las Fases 9 y 10 del checklist.)*
+#### `frontend-web` (Fase 9)
+
+SPA en React + TypeScript (Vite). Login por Authorization Code + PKCE contra el emisor OIDC configurado (`mock-oidc` local o Auth0/Okta CIC real), histórico de movimientos y transferencias contra `bff-web`.
+
+```bash
+cd frontend-web
+cp .env.example .env   # ya apunta al mock-oidc (puerto 4011 vía docker-compose, client_id "bp-web") y a bff-web (8010)
+npm install
+npm run dev             # sirve en http://localhost:5173
+```
+
+Requiere `bff-web` corriendo (ver su propia sección) y el `mock-oidc` de `docker-compose` (`make up`) para poder iniciar sesión en local.
+
+Variables de `.env.example`: `VITE_OIDC_ISSUER`, `VITE_OIDC_CLIENT_ID`, `VITE_BFF_WEB_URL`, `VITE_DEMO_CUENTA_ID` (cuenta precargada en el formulario de consulta, solo para demos locales).
+
+Scripts disponibles:
+- `npm run dev` / `npm run build` / `npm run preview`
+- `npm run lint` — `oxlint` (el scaffold actual de Vite trae este linter moderno en vez de ESLint clásico)
+- `npm run format` / `npm run format:check` — Prettier
+- `npm run test` — Vitest + React Testing Library (8 tests: manejo de la `Idempotency-Key`, pantalla de movimientos, formulario de transferencia incluyendo el reenvío ante rechazo por autenticación reforzada / step-up)
+
+Pantallas: `/login`, `/callback` (retorno del flujo PKCE), `/` (movimientos, protegida), `/transferencias` y `/transferencias/confirmacion` (protegidas).
+
+> Nota de verificación: en este entorno no hay herramienta de automatización de navegador disponible, así que la fase se verificó con la suite de tests automatizados más una comprobación real de que `npm run dev` sirve el shell de la SPA y sus rutas cliente (`curl` a `/`, `/login`, `/transferencias`) — no con un recorrido manual de clics en navegador.
 
 ## Stack propuesto
 
