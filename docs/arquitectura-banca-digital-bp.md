@@ -6,6 +6,7 @@
 **Fecha:** 2026-07-28
 **Clasificación:** Uso interno / confidencial
 **Repositorio:** https://github.com/pdfloresjdav/test-devsu
+**Autor:** Pedro Flores
 
 ---
 
